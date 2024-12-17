@@ -1,0 +1,251 @@
+<?xml version="1.0"?>
+
+<!-- Modelo del brazo derecho. Parametrizada con xacro-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="human_right_arm">
+
+    <!-- Longitudes parametrizadas -->
+    <xacro:property name="upperarm_length" value="$(arg upperarm_length)"/>
+    <xacro:property name="forearm_length" value="$(arg forearm_length)"/>
+    <xacro:property name="neck_shoulder_length" value="$(arg neck_shoulder_length)"/> <!-- Distancia entre cuello y hombro derecho-->
+
+<material name="color">
+    <color rgba="0.1 0.1 0.1 1"/>
+</material>
+
+<link name="base_neck"/> <!-- Original del modelo URDF base. Sin embargo, no es util nuestro porque debería de estar alineado con el hombro. Alternativa: Considerar la siguiente TF como la inicial-->
+
+<!-- Cadena desde (8) hasta (11) -->
+
+<link name="RightShoulder">
+    <inertial>
+        <mass value="2.2537"/>
+        <!-- COM respecto a jRightC7Shoulder -->
+        <origin xyz="0 0 ${neck_shoulder_length/2}" rpy="0 0 0"/>
+        <inertia ixx="0.0051014" iyy="0.00087992" izz="0.0051014" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+        <!-- Cilindro alineado con Z -->
+        <origin xyz="0 0 ${neck_shoulder_length/2}" rpy="0 0 1.5708"/>
+        <geometry>
+            <cylinder length="${neck_shoulder_length}" radius="0.027944"/>
+        </geometry>
+        <material name="color"/>
+    </visual>
+    <collision>
+        <!-- Igual a visual -->
+        <origin xyz="0 0 ${neck_shoulder_length/2}" rpy="1.5708 0 0"/>
+        <geometry>
+            <cylinder length="${neck_shoulder_length}" radius="0.027944"/>
+        </geometry>
+    </collision>
+</link>
+
+<link name="RightUpperArm_f1">
+    <inertial>
+        <mass value="0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0" iyy="0" izz="0" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+</link>
+
+<link name="RightUpperArm_f2">
+    <inertial>
+        <mass value="0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0" iyy="0" izz="0" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+</link>
+
+<link name="RightUpperArm">
+    <inertial>
+        <mass value="2.181"/>
+        <!-- COM respecto a jRightShoulder -->
+        <origin xyz="0 0 ${-upperarm_length/2}" rpy="0 0 0"/>
+        <inertia ixx="0.020332" iyy="0.0013806" izz="0.020332" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+        <!-- Cilindro alineado con Z -->
+        <origin xyz="0 0 ${-upperarm_length/2}" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${upperarm_length}" radius="0.035581"/>
+        </geometry>
+        <material name="color"/>
+    </visual>
+    <collision>
+        <!-- Igual a visual -->
+        <origin xyz="0 0 -${upperarm_length}" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${upperarm_length}" radius="0.035581"/>
+        </geometry>
+    </collision>
+</link>
+
+<link name="RightForeArm_f1">
+    <inertial>
+        <mass value="0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0" iyy="0" izz="0" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+</link>
+
+<link name="RightForeArm">
+    <inertial>
+        <mass value="1.454"/>
+        <!-- COM respecto a jRightElbow -->
+        <origin xyz="0 0 -${forearm_length/2}" rpy="0 0 0"/>
+        <inertia ixx="0.008948" iyy="0.00040906" izz="0.008948" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+        <!-- Cilindro alineado con Z -->
+        <origin xyz="0 0 -${forearm_length/2}" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${forearm_length}" radius="0.023721"/>
+        </geometry>
+        <material name="color"/>
+    </visual>
+    <collision>
+        <!-- Igual a visual -->
+        <origin xyz="0 0 -${forearm_length/2}" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${forearm_length}" radius="0.023721"/>
+        </geometry>
+    </collision>
+</link>
+
+<link name="RightFakeHand">
+    <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <box size="0.1 0.02 0.1"/> <!-- Tamaño del box (largo x ancho x alto) -->
+        </geometry>
+        <material name="color"/>
+    </visual>
+</link>
+
+<link name="RightFakeFingers">
+    <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <box size="0.07 0.01 0.05"/> <!-- Tamaño del box (largo x ancho x alto) -->
+        </geometry>
+        <material name="color"/>
+    </visual>
+</link>
+
+
+<!--Chain from (8) to (11)-->
+
+<!-- Cadena desde base_neck hasta RightForeArm -->
+
+<!-- Articulación fija en la base -->
+<joint name="jRightC7Shoulder_fixed" type="fixed">
+    <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+    <parent link="base_neck"/>
+    <child link="RightShoulder"/>
+</joint>
+
+<!-- Elevación del hombro (q1) -->
+<joint name="right_arm_q1" type="revolute">
+    <origin xyz="0 0 ${neck_shoulder_length}" rpy="0 0 0"/>
+    <parent link="RightShoulder"/>
+    <child link="RightUpperArm_f1"/>
+    <dynamics damping="0.1" friction="0.0"/>
+    <limit effort="30" velocity="1.0" lower="-0.5235987756" upper="2.61799387799"/> <!-- -30º a 150º -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Movimiento frontal del hombro (q2) -->
+<joint name="right_arm_q2" type="revolute">
+    <origin xyz="0 0 0" rpy="0 -1.5708 0 "/> <!-- α = 90° -->
+    <parent link="RightUpperArm_f1"/>
+    <child link="RightUpperArm_f2"/>
+    <dynamics damping="0.1" friction="0.0"/>
+    <limit effort="30" velocity="1.0" lower="-0.1745329252944" upper="2.26892802759"/> <!-- -10º a 130º -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Rotación interna/externa del hombro (q3) -->
+<joint name="right_arm_q3" type="revolute">
+    <origin xyz="0 -${upperarm_length} 0" rpy="1.5708 3.14159 0"/> <!-- d = 0.27m, α = 90° -->
+    <parent link="RightUpperArm_f2"/>
+    <child link="RightUpperArm"/>
+    <dynamics damping="0.1" friction="0.0"/>
+    <limit effort="30" velocity="1.0" lower="-1.57079632679" upper="1.57079632679"/> <!--  -90° a 90°-->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Flexión del codo (q4) -->
+<joint name="right_arm_q4" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 1.5708 0"/> <!-- d = -0.28m, α = -90°. Original: rpy="0 -1.5708 0" -->
+    <parent link="RightUpperArm"/>
+    <child link="RightForeArm_f1"/>
+    <dynamics damping="0.1" friction="0.0"/>
+    <limit effort="30" velocity="1.0" lower="0" upper="3.14159"/> <!-- 0° a 180° -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Pronación/supinación del antebrazo (q5) -->
+<joint name="right_arm_q5" type="revolute">
+    <origin xyz="${forearm_length} 0 0" rpy="0 1.5708 0 "/> <!-- d = -0.25m, α = 90° -->
+    <parent link="RightForeArm_f1"/>
+    <child link="RightForeArm"/>
+    <dynamics damping="0.1" friction="0.0"/>
+    <limit effort="30" velocity="1.0" lower="0" upper="3.14159"/> <!-- 0° a 180° -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Mano derecha. Se divide en dos partes -->
+<joint name="jRighthand_f1_fixed" type="fixed">
+    <origin xyz="0 0 0.05" rpy="0 0 0 "/> <!-- l_box/ 2 -->
+    <parent link="RightForeArm"/>
+    <child link="RightFakeHand"/>
+</joint>
+
+<joint name="jRighthand_f2_fixed" type="fixed">
+    <origin xyz="-0.015 0.005 0.075" rpy="0 0 0 "/> <!-- l_box/ 2 -->
+    <parent link="RightFakeHand"/>
+    <child link="RightFakeFingers"/>
+</joint>
+
+
+
+<!-- Sensor  4-->
+<sensor name="RightShoulder_gyro" type="gyroscope">
+<parent link="RightShoulder"/>
+<origin xyz="-0.022346   -0.055932   -0.067036" rpy="1.2429    -0.30476     -1.4616"/>
+</sensor>
+<sensor name="RightShoulder_accelerometer" type="accelerometer">
+<parent link="RightShoulder"/>
+<origin xyz="-0.022346   -0.055932   -0.067036" rpy="1.2429    -0.30476     -1.4616"/>
+</sensor>
+<!-- Sensor  5-->
+<sensor name="RightUpperArm_gyro" type="gyroscope">
+<parent link="RightUpperArm"/>
+<origin xyz="-0.021873    -0.10943    0.021884" rpy="0.02004    -0.11963     -1.6812"/>
+</sensor>
+<sensor name="RightUpperArm_accelerometer" type="accelerometer">
+<parent link="RightUpperArm"/>
+<origin xyz="-0.021873    -0.10943    0.021884" rpy="0.02004    -0.11963     -1.6812"/>
+</sensor>
+<!-- Sensor  6-->
+<sensor name="RightForeArm_gyro" type="gyroscope">
+<parent link="RightForeArm"/>
+<origin xyz="0.0021274    -0.21903    0.021991" rpy="-0.61456   -0.082799     -1.3499"/>
+</sensor>
+<sensor name="RightForeArm_accelerometer" type="accelerometer">
+<parent link="RightForeArm"/>
+<origin xyz="0.0021274    -0.21903    0.021991" rpy="-0.61456   -0.082799     -1.3499"/>
+</sensor>
+<!-- Sensor  7-->
+<!-- <sensor name="RightHand_gyro" type="gyroscope">
+<parent link="RightHand"/>
+<origin xyz="7.0533e-05   -0.060282    0.021961" rpy="-0.469   -0.050132     -1.5645"/>
+</sensor>
+<sensor name="RightHand_accelerometer" type="accelerometer">
+<parent link="RightHand"/>
+<origin xyz="7.0533e-05   -0.060282    0.021961" rpy="-0.469   -0.050132     -1.5645"/>
+</sensor> -->
+
+
+</robot>

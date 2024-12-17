@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <!-- Package metadata -->
+  <name>human_articular_space</name>
+  <version>1.0.0</version>
+  <description>A ROS Python package for calculate some human angles from 3D skeleton data</description>
+
+  <!-- Author and maintainer information -->
+  <author email="rcastro@uma.es">Rodrigo Castro</author>
+  <maintainer email="rcastro@uma.es">Rodrigo Castro</maintainer>
+ 
+  <!-- License information -->
+  <license>GNU General Public License Version 3</license>
+
+  <!-- Required build tool dependency (catkin) -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Build depend -->
+  <build_depend>dynamic_reconfigure</build_depend>
+
+  <!-- ROS Python library dependencies -->
+  <depend>rospy</depend>
+
+  <!-- ROS core library for accessing ROS filesystem and resources -->
+  <depend>roslib</depend>
+
+  <!-- ROS standard message types for communication -->
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <!-- Package that contain custom message necessary to subscribe -->
+  <depend>skeleton_3d</depend>
+
+  <!-- Dependencies for generating and processing ROS messages -->
+  <depend>message_generation</depend>
+  <depend>message_filters</depend>
+
+  <!-- Required for using NumPy in Python scripts -->
+  <depend>python3-numpy</depend>
+
+  <!-- Runtime dependency for generated message types -->
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>dynamic_reconfigure</exec_depend>
+
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+
+</package>
+
