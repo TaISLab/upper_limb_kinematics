@@ -23,8 +23,14 @@ generate_dynamic_reconfigure_options(
 ## Specify the message files to be generated
 add_message_files(
   FILES
+
+  # From IK_arm_calculator.py
   HumanBody.msg # Message to publish
   DHAnglesArm.msg
+
+  # From tf2_listener.py
+  KP_URDF.msg
+  KP_vision.msg # DEBUG only
 
 )
 
@@ -66,6 +72,7 @@ install(PROGRAMS
   scripts/generate_urdf.py
   scripts/dynamic_parameter_node.py
   scripts/visualization_reboot.py
+  scripts/tf2_listener.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

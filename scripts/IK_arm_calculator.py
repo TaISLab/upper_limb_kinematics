@@ -259,7 +259,7 @@ class ROSInterface:
         Initialize the ROS node, set up subscribers, and prepare the 3D skeleton tracker.
         """
         # Initialize the ROS node with a unique name
-        rospy.init_node('human_articular_space_calculator', anonymous=False)
+        rospy.init_node('IK_arm_calculator', anonymous=False)
 
         # Obtener el namespace del argumento pasado desde el archivo launch
         namespace = rospy.get_param('~namespace1', 'default_namespace')  # Valor por defecto

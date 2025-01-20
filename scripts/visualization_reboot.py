@@ -26,8 +26,8 @@ class RobotStatePublisherWrapper:
                 rospy.sleep(2)  # Esperar a que el nodo se cierre
 
             # Relanzar robot_state_publisher
-            os.system("rosrun robot_state_publisher robot_state_publisher __ns:=/human_body/right_arm &")
-            rospy.loginfo("robot_state_publisher relanzado.")
+            # os.system("rosrun robot_state_publisher robot_state_publisher __ns:=/human_body/right_arm &")
+            # rospy.loginfo("robot_state_publisher relanzado.")
 
             # Reiniciar RViz
             if "/rviz_arm" in ros_nodes:

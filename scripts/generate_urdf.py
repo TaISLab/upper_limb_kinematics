@@ -17,7 +17,7 @@ class DynamicURDFGenerator:
 
         # Resolver la ruta del archivo Xacro
         package_path = roslib.packages.get_pkg_dir('human_articular_space')
-        self.xacro_path = os.path.join(package_path, 'urdf', 'my_human_arm_xacro_located.xacro')
+        self.xacro_path = os.path.join(package_path, 'urdf', 'human_right_arm.xacro')
 
         # Suscribirse al tópico de notificación de cambios
         rospy.Subscriber("/parameter_update", Bool, self.parameter_update_callback)
@@ -49,9 +49,9 @@ class DynamicURDFGenerator:
     def parameter_update_callback(self, msg):
         rospy.loginfo("Notificación de cambio de parámetros recibida.")
 
-        new_upperarm_length = rospy.get_param('/human_body/right_arm/dynamic_params/upperarm_length', 0.28)
-        new_forearm_length = rospy.get_param('/human_body/right_arm/dynamic_params/forearm_length', 0.25)
-        new_neck_shoulder_length = rospy.get_param('/human_body/right_arm/dynamic_params/neck_shoulder_length', 0.175)
+        new_upperarm_length = rospy.get_param('/human_body/right_arm/dynamic_params/upperarm_length')
+        new_forearm_length = rospy.get_param('/human_body/right_arm/dynamic_params/forearm_length')
+        new_neck_shoulder_length = rospy.get_param('/human_body/right_arm/dynamic_params/neck_shoulder_length')
 
         if (new_upperarm_length != self.upperarm_length or
             new_forearm_length != self.forearm_length or
