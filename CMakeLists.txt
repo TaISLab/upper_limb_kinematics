@@ -8,16 +8,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   sensor_msgs # Para el nodo conversor
-  # pose_msgs # Ensure 'pose_msgs' is properly installed (custom package)
   skeleton_3d # This package contains the Skeleton3D message
   message_generation
   urdf
-  dynamic_reconfigure
-)
-
-## Generate archivos de configuracion para reconfigurar
-generate_dynamic_reconfigure_options(
-    cfg/DynamicParameters.cfg
 )
 
 ## Specify the message files to be generated
@@ -25,13 +18,12 @@ add_message_files(
   FILES
 
   # From IK_arm_calculator.py
-  HumanBody.msg # Message to publish
+  HumanBody.msg
   DHAnglesArm.msg
 
   # From tf2_listener.py
   KP_URDF.msg
   KP_vision.msg # DEBUG only
-
 )
 
 ## Generate messages and services with the listed dependencies
@@ -40,11 +32,8 @@ generate_messages(
   std_msgs
   geometry_msgs
   sensor_msgs # Para el nodo conversor
-  # pose_msgs # imported from ros_trt_pose
   skeleton_3d # This package contains the Skeleton3D message
 )
-
-
 
 ## Define the package and its dependencies
 catkin_package(
@@ -53,7 +42,6 @@ catkin_package(
     std_msgs
     geometry_msgs
     sensor_msgs # Para el nodo conversor
-    # pose_msgs
     skeleton_3d # This package contains the Skeleton3D message
     message_runtime
 )
@@ -66,12 +54,8 @@ include_directories(
 ## Install Python executable scripts
 install(PROGRAMS
   scripts/IK_arm_calculator.py
-  scripts/publicador_manual_kp.py
   scripts/human_body_to_joint_states_converter.py
   scripts/pose_shoulder_TF_publisher.py
-  scripts/generate_urdf.py
-  scripts/dynamic_parameter_node.py
-  scripts/visualization_reboot.py
   scripts/tf2_listener.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
@@ -89,9 +73,6 @@ install(DIRECTORY
 #  SHELLS sh
 #  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env-hooks
 # )
-
-# make sure configure headers are built before any node using them
-# add_dependencies(dynamic_parameter_node ${PROJECT_NAME}_gencfg) # No es necesario porq el nodo es en python
 
 ## Display a status message once the CMake configuration completes
 message(STATUS "CMake configuration for human_articular_space completed successfully.")

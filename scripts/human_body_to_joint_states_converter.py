@@ -70,16 +70,15 @@ class ROSInterface:
                 joint_state.header = msg.header 
 
                 # Right arm assignment
-                joint_state.name = np.array(['right_arm_q1', 'right_arm_q2', 'right_arm_q3', 'right_arm_q4', 'right_arm_q5'])
+                joint_state.name = np.array(['right_arm_q1', 'right_arm_q2', 'right_arm_q3', 'right_arm_q4', 'right_arm_q5', 'upperarm_length', 'forearm_length'])
                 joint_state.position = np.array([np.radians(msg.right_arm.q1),
                                                 np.radians(msg.right_arm.q2),
                                                 np.radians(msg.right_arm.q3),
                                                 np.radians(msg.right_arm.q4), 
-                                                np.radians(0.0)
+                                                np.radians(0.0),
+                                                msg.right_arm.upperarm_length,
+                                                msg.right_arm.forearm_length
                                                 ])
-            
-                ## DEBUG
-                #joint_state.position = [1.0, 0.0, 0.0, 0.0, 0.0]
                 
                 self.pub_joint_state.publish(joint_state)
             else:

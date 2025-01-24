@@ -8,3 +8,7 @@ float32 q3 # rotacion interna/externa del hombro
 # Codo
 float32 q4 # flexion de codo
 float32 q5 # pronacion/supinacion
+
+# Longitudes
+float32 upperarm_length
+float32 forearm_length

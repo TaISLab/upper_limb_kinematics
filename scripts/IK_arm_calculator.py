@@ -2,32 +2,38 @@
 
 import rospy
 import numpy as np
-import message_filters
 import roslib.packages
 from geometry_msgs.msg import Point
 from scipy.spatial.transform import Rotation as R
 
-# Import the custom skeleton tracking class
-# from skeleton_tracker_3d import SkeletonTracker3D  
-
 # Import custom message types
-from skeleton_3d.msg import Skeleton3D  # Custom message type for 3D skeleton data
-from human_articular_space.msg import HumanBody, DHAnglesArm
+from skeleton_3d.msg import Skeleton3D  # Mensaje con info de los KP
+from human_articular_space.msg import HumanBody # Mensaje a publicar
 
-def rotate_vector_quaternion(vector, q1, q2):
+def rotate_vector_local(vector, axis_local, angle):
+    """
+    Rota un vector alrededor de un eje local mediante cuaterniones.
+    
+    Args:
+    - vector: np.array de forma (3,) con el vector a rotar.
+    - axis_local: np.array de forma (3,) con el eje local alrededor del cual rotar.
+    - angle: Ángulo en grados.
 
-    if np.isnan(q1) or np.isnan(q2):
-        raise ValueError("Angles q1 or q2 are NaN, cannot create quaternions.")
+    Returns:
+    - rotated_vector: np.array con el vector rotado.
+    """
+    if np.isnan(angle):
+        raise ValueError("El ángulo no puede ser NaN.")
+    
+    axis_local = axis_local / np.linalg.norm(axis_local) # Normalizar vector. Es imprescindible
 
-    # Crear quaternions para las rotaciones
-    quat_y = R.from_euler('y', q1, degrees=True).as_quat()  # Rotación alrededor de Y
-    quat_x = R.from_euler('x', q2, degrees=True).as_quat()  # Rotación alrededor de X
+    # Se crea el cuaternion de rotación cómo:
+    #   vect_r = theta * vect_unitario_director_eje_rot
+    #   theta: ángulo (magnitud) a rotar
+    quat = R.from_rotvec(np.radians(angle) * axis_local) 
 
-    # Combinar las rotaciones
-    combined_quat = R.from_quat(quat_y) * R.from_quat(quat_x)
+    rotated_vector = quat.apply(vector) # Se aplica la rotación al vector
 
-    # Rotar el vector
-    rotated_vector = combined_quat.apply(vector)
     return rotated_vector
 
 def normalize_vector(vector):
@@ -42,30 +48,6 @@ def normalize_vector(vector):
         raise ValueError("No se puede normalizar un vector de magnitud cero.")
     return vector / norm
 
-# BORRAR: Función para calcular la matriz de rotación alrededor del eje Y (q1)
-# def rotation_matrix_y(q1):
-#     return np.array([
-#         [np.cos(q1), 0, np.sin(q1)],
-#         [0, 1, 0],
-#         [-np.sin(q1), 0, np.cos(q1)]
-#     ])
-
-# BORRAR: Función para calcular la matriz de rotación alrededor del eje X (q2)
-# def rotation_matrix_x(q2):
-#     return np.array([
-#         [1, 0, 0],
-#         [0, np.cos(q2), -np.sin(q2)],
-#         [0, np.sin(q2), np.cos(q2)]
-#     ])
-
-# BORRAR: Función para calcular la matriz de rotación alrededor del eje Z (q3)
-# def rotation_matrix_z(q3):
-#     return np.array([
-#         [np.cos(q3), -np.sin(q3), 0],
-#         [np.sin(q3),  np.cos(q3), 0],
-#         [0, 0, 1]
-#     ])
-
 def are_kp_valid(*keypoints):
     '''
     Verify if all the keypoints are valid. Kp valid: not(0.0)
@@ -73,18 +55,17 @@ def are_kp_valid(*keypoints):
 
     return not any(np.all(kp == 0.0) for kp in keypoints)
 
-import numpy as np
 
 def calculate_angle_2_vect(v1, v2):
     """
-    Calcula el ángulo entre dos vectores en radianes.
+    Calcula el ángulo entre dos vectores en grados.
     
     Parámetros:
     - v1: numpy array o lista, primer vector.
     - v2: numpy array o lista, segundo vector.
     
     Retorna:
-    - El ángulo (sin signo) entre los vectores en radianes.
+    - El ángulo (sin signo) entre los vectores en grados.
     """
     # Convertir a numpy arrays si no lo son
     v1 = np.array(v1)
@@ -221,44 +202,14 @@ def project_Kp_to_plane(point, plane_point, plane_normal):
 
     return projected_point
 
-def normal_vector_from_points(A, B, C):
-    """
-    Calculates the normal vector to the plane defined by 3 points
-
-    Args: 
-        A (np.array): Coordenadas del punto A (x1, y1, z1)
-        B (np.array): Coordenadas del punto B (x2, y2, z2)
-        C (np.array): Coordenadas del punto C (x3, y3, z3)
-
-    Returns:
-        np.array: Vector normal al plano. Sentido según gira BA -> BC, es decir, BA gira hacia BC 
-    """ 
-
-    A, B, C = np.array(A), np.array(B), np.array(C)
-
-    # Calcular los vectores BA, BC
-    BA = A - B
-    BC = C - B
-
-    normal = np.cross(BA, BC)
-
-    # Normalizar vector
-    norm = np.linalg.norm(normal)
-    if norm == 0:
-        raise ValueError("No se puede normalizar un vector de magnitud cero.")
-    
-    normal_norm = normal / norm
-    
-    return normal_norm
-
-
 class ROSInterface:
 
     def __init__(self):
         """
         Initialize the ROS node, set up subscribers, and prepare the 3D skeleton tracker.
         """
-        # Initialize the ROS node with a unique name
+
+        # Inicializar nodo ROS con nombre único
         rospy.init_node('IK_arm_calculator', anonymous=False)
 
         # Obtener el namespace del argumento pasado desde el archivo launch
@@ -271,36 +222,66 @@ class ROSInterface:
             rospy.logerr("The package 'human_articular_space' was not found.")
             raise e
 
-        # Set up a ROS publisher for Human Angles
-        # self.pub_skeleton = rospy.Publisher('/topic', mensaje_importado, queue_size=10)
+        # ROS publisher
         topic_name = f"/{namespace}/description"
         self.pub_human_body = rospy.Publisher(topic_name, HumanBody, queue_size=10) # Definir sin la / barra proporciona flexibilidad para cambiar el namespace del topic en un futuro
 
         # Set up subscriber for /skeleton_3D
-        self.sub_skeleton_3D_keypoints = rospy.Subscriber('/skeleton_3D', Skeleton3D, self.calculate_angles_callback) # Dont forget SELF.
+        self.sub_skeleton_3D_keypoints = rospy.Subscriber('/skeleton_3D', Skeleton3D, self.IK_calculator_callback) # Dont forget SELF.
 
-    def calculate_angles_callback(self, msg):
+        # FLAGS de estado
+        self.last_valid_kp = True  # Estado anterior de los KP
+        self.is_paused = False  # Estado actual de pausa
+        self.was_paused = False  # Estado previo de pausa
+        self.data_received = False  # Indica si se han recibido datos
+
+        # Configuración del temporizador para detectar inactividad
+        self.timeout_duration = 1.0  # Segundos antes de entrar en pausa
+        self.timer = rospy.Timer(rospy.Duration(self.timeout_duration), self.timeout_callback)
+
+    
+    def timeout_callback(self, event):
         """
-        Callback function to calculate human articular angles.
+        Se ejecuta periódicamente para verificar si se están recibiendo datos.
+        """
+        if not self.data_received:
+            if not self.is_paused:
+                rospy.logwarn("No se están recibiendo datos en /skeleton_3D. Nodo en pausa.")
+                self.is_paused = True
+        else:
+            if self.is_paused:
+                rospy.loginfo("Datos de /skeleton_3D recibidos nuevamente. Nodo reanudado.")
+                self.is_paused = False
+            self.data_received = False  # Reset para la siguiente iteración
+    
+    def IK_calculator_callback(self, msg):
+        """
+        Callback function to calculate the DH angles of the right arm.
+        - q1: Elevación frontal
+        - q2: Elevación lateral
+        - q3: Rotación interna/externa del hombro. 
+                Interna-> Negativa 
+                Externa -> Positiva
+        - q4: Flexión del codo
 
         Parameters:
         - msg: Skeleton3D message
+
+        Returns:
+        - [q1, q2, q3, q4] del brazo derecho
+        - Longitud del brazo superior (upperarm_length)
+        - Longitud del antebrazo (forearm_length)
         """
 
         try:
+            # Indicar que se han recibido datos
+            self.data_received = True
 
-            # Convert the received messages into a list of 3D keypoint arrays.
-            # Transform to ros msg to numpy vector
+            # Convert the received messages into a list of 3D keypoint arrays. Transform to ros msg to numpy vector
             keypointsX = np.array([(kp.x, kp.y, kp.z) for kp in msg.keypoints])
-
             human_body = HumanBody() # msg que publicar
 
             # Guide of Kp
-            #  0 nose
-            #  1 left_eye
-            #  2 right_eye
-            #  3 left_ear
-            #  4 right_ear
             #  5 left_shoulder
             #  6 right_shoulder
             #  7 left_elbow
@@ -309,156 +290,111 @@ class ROSInterface:
             # 10 right_wrist
             # 11 left_hip
             # 12 right_hip
-            # 13 left_knee
-            # 14 right_knee
-            # 15 left_ankle
-            # 16 right_ankle
-            # 17 neck
+            # 17 neck. no funciona.
 
             # Asignacion de Kp
             kp_R_Shoulder = keypointsX[6]
             kp_R_Elbow = keypointsX[8]
             kp_R_Wrist = keypointsX[10]
-
             kp_L_Shoulder = keypointsX[5]
-            kp_L_Elbow = keypointsX[7]
-            kp_L_Wrist = keypointsX[9]
-            
-            kp_L_Hip = keypointsX[11]
-            kp_R_Hip = keypointsX[12]
 
             human_body.header.stamp = rospy.Time.now()
 
-            if are_kp_valid(kp_R_Shoulder, kp_L_Shoulder, kp_R_Hip, kp_L_Hip, kp_R_Elbow, kp_L_Elbow, kp_R_Wrist):
+            if are_kp_valid(kp_R_Shoulder, kp_L_Shoulder, kp_R_Elbow, kp_R_Wrist):
+
+                # Si antes eran inválidos, loguea el cambio
+                if not self.last_valid_kp:
+                    rospy.logdebug("Cálculo IK iniciado: keypoints detectados")
+                self.last_valid_kp = True
                 
-                # Medida de longitudes
-                rospy.loginfo(f"L_Hombros: {np.linalg.norm(kp_R_Shoulder - kp_L_Shoulder)}")
-                rospy.loginfo(f"L_R_upperarm: {np.linalg.norm(kp_R_Elbow - kp_R_Shoulder)}")
-                rospy.loginfo(f"L_R_forearm: {np.linalg.norm(kp_R_Wrist - kp_R_Elbow)}")
-                rospy.loginfo(f"L_hips: {np.linalg.norm(kp_R_Hip - kp_L_Hip)}")
+                ################## Longitudes ##################
+                upperarm_length = np.linalg.norm(kp_R_Elbow - kp_R_Shoulder)
+                forearm_length = np.linalg.norm(kp_R_Wrist - kp_R_Elbow)
 
-                # Vectores comunes
-                half_hip = kp_L_Hip + (kp_R_Hip - kp_L_Hip) / 2 # Punto de aplicacion
-                shoulder_half = kp_L_Shoulder + (kp_R_Shoulder - kp_L_Shoulder) / 2
+                human_body.right_arm.upperarm_length = upperarm_length
+                human_body.right_arm.forearm_length = forearm_length
 
-                ################## Calculo q1 ############################
-                # sagittal plane
-                    # vector normal: vect_laterolateral
-                    # Punto del plano: half_hip
+                ################## Vectores esenciales ##################
+                # Vector = Final - Inicial
 
-                vect_laterolateral = normalize_vector(kp_R_Hip - kp_L_Hip) # vector normal del plano, normalizado
-                
+                vect_upperarm = normalize_vector(kp_R_Elbow - kp_R_Shoulder)
+                vect_laterolateral = normalize_vector(kp_R_Shoulder - kp_L_Shoulder)
 
-                ## Vector de referencia
-                # vect_ref_q1 = half_hip - shoulder_half # Vector de referencia q1. Se mide la diferencia entre este vector y el vector longitudinal del brazo
-                # vect_ref_q1_norm = normalize_vector(vect_ref_q1)
+                ################## Calculo q1 ##################
+                # Plano sagital
+                    # vector normal: vect_laterolateral. Sentido de q1 positivo
+                    # Punto del plano: right_shoulder
 
-                # SIMPLIFICACIÓN: El vector de ref es siempre perpendicular al plano del suelo
-                vect_ref_q1_norm = ([0, 0, -1])
-                
-                ## Calculo sin signo
-                # human_body.right_arm.q1 = calculate_angle_2_vect(
-                #     vect_ref_q1_norm, # Vector de referencia q1
-                #     project_Kp_to_plane(kp_R_Elbow, half_hip, vect_laterolateral) - project_Kp_to_plane(kp_R_Shoulder, half_hip, vect_laterolateral) # Rev2. Se necesitan proyectar ambos puntos
-                # )
+                vect_ref_q1 = ([0, 0, -1]) # SIMPLIFICACIÓN: El vector de ref es siempre perpendicular al plano del suelo
 
-                ## Calculo con signo
+                # Calculo con signo
                 human_body.right_arm.q1 = calculate_signed_angle_3d(
-                    vect_ref_q1_norm, # Vector de referencia q1
-                    project_Kp_to_plane(kp_R_Elbow, half_hip, vect_laterolateral) - project_Kp_to_plane(kp_R_Shoulder, half_hip, vect_laterolateral), # Rev2. Se necesitan proyectar ambos puntos
+                    vect_ref_q1,
+                    normalize_vector(project_Kp_to_plane(kp_R_Elbow, kp_R_Shoulder, vect_laterolateral) - kp_R_Shoulder), # Solo es necesario proyectar el codo, el RShoulder pertenece
                     vect_laterolateral
                 )
 
-                ################### Calculo q2 ###################################
-
+                ################## Calculo q2 ##################
                 # Coronal plane
-                    # vector normal: vect_dorsoventral
-                    # Punto del plano: half_hip
-                vect_dorsoventral = normal_vector_from_points(kp_L_Shoulder, half_hip, kp_R_Shoulder) # MUY IMPORTANTE EL ORDEN
-                # rospy.loginfo(f"vect_dorsoventral: {vect_dorsoventral}")
+                    # Metodo: Se establece el vector q2 de referencia y se rota en el eje local de aplicación de q1. Posteriormente se calcula el ángulo entre el vector de referencia rotado y el vector longitudinal
+                    # Punto del plano: right_shoulder
+                
+                if (human_body.right_arm.q1 != np.nan):
+                    vect_ref_q2 = ([0, 0, -1]) # SIMPLIFICACION: Vector Z negativo
+                    vect_ref_q2_rot = rotate_vector_local(vect_ref_q2, vect_laterolateral, human_body.right_arm.q1) # CORREGIDO: Se3 rota sobre el eje local
+                    vect_ref_q2_rot_norm = normalize_vector(vect_ref_q2_rot)
+                    
+                    normal_vector_q2_sign = np.cross(vect_upperarm, vect_laterolateral) # Para definir el signo de q2
 
-                ## Vector de referencia
-                # vect_ref_q2 = half_hip - shoulder_half
-                # vect_ref_q2_norm = normalize_vector(vect_ref_q2)
+                    human_body.right_arm.q2 = calculate_signed_angle_3d(
+                        vect_ref_q2_rot_norm, # Vector de referencia q1
+                        vect_upperarm, # No necesitan ser proyectados
+                        normal_vector_q2_sign
+                    )
 
-                ## SIMPLIFICACION
-                vect_ref_q2_norm = ([0, 0, -1])
-
-                # Calculo sin signo
-                human_body.right_arm.q2 = calculate_angle_2_vect(
-                    vect_ref_q2_norm,
-                    project_Kp_to_plane(kp_R_Elbow, half_hip, vect_dorsoventral) - project_Kp_to_plane(kp_R_Shoulder, half_hip, vect_dorsoventral) # Vector longitudinal del brazo derecho
-                )
-
-                # Calculo con signo
-                # human_body.right_arm.q2 = calculate_signed_angle_3d(
-                #     vect_ref_q2_norm, # Vector de referencia q2
-                #     project_Kp_to_plane(kp_R_Elbow, half_hip, vect_dorsoventral) - project_Kp_to_plane(kp_R_Shoulder, half_hip, vect_dorsoventral) # Vector longitudinal del brazo derecho
-                #     vect_dorsoventral
-                # )
-
-                ################### Calculo q3 ######################################
+                ################## Calculo q3 ##################
                 if (human_body.right_arm.q1 != np.nan) and (human_body.right_arm.q2 != np.nan):
                 
                     # Plano de proyección
                     #   vector normal: vector longitudinal del brazo
                     #   Pto de aplicación: codo
                     
-                    # vect_upper_arm = kp_R_Shoulder - kp_R_Elbow
-                    vect_upper_arm = kp_R_Elbow - kp_R_Shoulder # Final - inicial
-                    vect_ref_q3_norm = normalize_vector(kp_L_Shoulder - kp_R_Shoulder) # Vector de referencia. Otra opción. Considerar cadera
+                    vect_ref_q3 = normalize_vector(kp_L_Shoulder - kp_R_Shoulder) # Vector de referencia.
                     
-                    ## DEBUG
-                    # vect_ref_q3 = ([0, -1, 0])
-                    # human_body.right_arm.q1 = 45
-                    # human_body.right_arm.q2 = 45
-                    ## Rotacion con angulos EULER. Dependiente del orden
-                    # vector_ref_q3_rotated_try1 = rotation_matrix_x(np.radians(human_body.right_arm.q2)) @ (rotation_matrix_y(np.radians(human_body.right_arm.q1)) @ vect_ref_q3_norm)
-                    # vector_ref_q3_rotated_try2 = rotation_matrix_y(np.radians(human_body.right_arm.q1)) @ (rotation_matrix_x(np.radians(human_body.right_arm.q2)) @ vect_ref_q3_norm)
-                    
-                    # Rotacion con cuaterniones. es independiente del orden de la rotacion
-                    vector_ref_q3_rotated_try3 = rotate_vector_quaternion(vect_ref_q3_norm, human_body.right_arm.q1, human_body.right_arm.q2)
-
-                    ## DEBUG
-                    # rospy.loginfo(f"v_ref_q3: {vect_ref_q3}")
-                    # rospy.loginfo(f"v_ref_q3_try1: {vector_ref_q3_rotated_try1}")
-                    # rospy.loginfo(f"v_ref_q3_try2: {vector_ref_q3_rotated_try2}")
-                    # rospy.loginfo(f"v_ref_q3_try3: {vector_ref_q3_rotated_try3}")
+                    vector_ref_q3_rot1 = rotate_vector_local(vect_ref_q3, vect_laterolateral, human_body.right_arm.q1) # No tiene interes porq se rota sobre si mismo
+                    vector_ref_q3_rot2 = rotate_vector_local(vector_ref_q3_rot1, normal_vector_q2_sign, human_body.right_arm.q2)
 
                     human_body.right_arm.q3 = calculate_signed_angle_3d(
-                        vector_ref_q3_rotated_try3, # no hace falta proyectar, pertenece siempre
-                        project_Kp_to_plane(kp_R_Wrist, kp_R_Elbow, vect_upper_arm) - kp_R_Elbow,
-                        vect_upper_arm
+                        vector_ref_q3_rot2, # no hace falta proyectar, pertenece siempre
+                        normalize_vector(project_Kp_to_plane(kp_R_Wrist, kp_R_Elbow, vect_upperarm) - kp_R_Elbow),
+                        vect_upperarm
                     )
 
-                    # human_body.right_arm.q3 = calculate_angle_2_vect(
-                    #     vector_ref_q3_rotated_try3, # no hace falta proyectar, pertenece siempre
-                    #     project_Kp_to_plane(kp_R_Wrist, kp_R_Elbow, vect_upper_arm) - kp_R_Elbow
-                    # )
-
-                ########## Calculo q4 ################
+                ################## Calculo q4 ##################
                 human_body.right_arm.q4 = calculate_angle_3_points(kp_R_Shoulder, kp_R_Elbow, kp_R_Wrist)
 
-                ########### Publicar q ##############
-
+                ################## Publicar q ##################
                 # Casos no estudiados
                 human_body.left_arm.q1 = np.nan
                 human_body.left_arm.q2 = np.nan
                 human_body.left_arm.q3 = np.nan
                 human_body.left_arm.q4 = np.nan
+                human_body.left_arm.upperarm_length = np.nan
+                human_body.left_arm.forearm_length = np.nan
 
                 # Publish the human angles calculated
                 self.pub_human_body.publish(human_body)
-
             else:
-                rospy.loginfo("Algun Kp no se ha detectado")
-                rospy.loginfo("*                         *")
-                rospy.loginfo("*                         *")
-                rospy.loginfo("***************************")
+                # Solo imprime si el estado ha cambiado
+                if self.last_valid_kp:
+                    rospy.logdebug("Cálculo IK detenido: un KP esencial no se ha detectado")
+                self.last_valid_kp = False
 
         except Exception as e:
             # Log any errors that occur during calculate
             rospy.logerr(f"Error calculating angles: {e}")
+
+
 
 
 if __name__ == '__main__':
@@ -466,12 +402,11 @@ if __name__ == '__main__':
         # Create an instance of the ROSInterface and start listening for messages
         interface = ROSInterface()
 
-
         def shutdown_callback():
             """
             Handles the shutdown of the ROS node, ensuring clean closure of resources.
             """
-            rospy.loginfo("Shutting down human_articular_space_calculator node...")
+            rospy.loginfo("Shutting down IK_arm_calculator node...")
 
         # Register a shutdown hook
         rospy.on_shutdown(shutdown_callback)
