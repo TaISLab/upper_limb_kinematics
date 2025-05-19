@@ -17,7 +17,7 @@
 
     <!-- Argumentos de configuración del launch -->
     <arg name="use_rviz" default="true" />
-    <arg name="use_tf2_listener" default="false" />
+    <arg name="use_tf2_listener" default="true" />
     
     <!-- Namespace de los nodos/topics -->
     <arg name="namespace1" default="human_body" />
@@ -34,7 +34,7 @@
             <param name="/right_arm_description" command="$(find xacro)/xacro $(find human_articular_space)/urdf/human_right_arm.xacro visual_upperarm_length:=$(arg visual_upperarm_length) visual_forearm_length:=$(arg visual_forearm_length)" />
 
             <!-- Nodo para el cálculo de la cinematica inversa del brazo -->
-            <node name="IK_arm" pkg="human_articular_space" type="IK_arm_calculator.py" required="true" output="screen" >
+            <node name="IK_arm" pkg="human_articular_space" type="IK_arm_calculator.py" required="false" output="screen" >
                 <param name="namespace1" value="$(arg namespace1)" />
             </node>
 
@@ -53,8 +53,14 @@
                 <remap from="robot_description" to="/right_arm_description" />
             </node>
 
+            <!-- Jacobiana del brazo derecho -->
+            <include file="$(find human_articular_space)/launch/jacobian.launch"/>
+
         </group>
     </group>
+
+    <!-- Transformación estática entre base_link y fr3_link0. Esto permite poder ver el URDF del robot en el RViz del brazo  -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf" args="0 0 0 0 0 0 1 base_link fr3_link0" />
 
     <group if="$(arg use_rviz)">
         <!-- Lanzar RViz con una configuración predeterminada -->

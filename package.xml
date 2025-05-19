@@ -41,6 +41,8 @@
 
   <!-- Runtime dependency for generated message types -->
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>kdl_parser_py</exec_depend> <!-- Jacobiano. kdl-parser-py-->
+
 
   <export>
     <!-- Other tools can request additional information be placed here -->

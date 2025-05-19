@@ -10,6 +10,14 @@ from scipy.spatial.transform import Rotation as R
 from skeleton_3d.msg import Skeleton3D  # Mensaje con info de los KP
 from human_articular_space.msg import HumanBody # Mensaje a publicar
 
+from franka_concerto.funciones_utiles import calculate_quaternion_0_F, np_array_to_point, np_array_to_vector3, point_to_np_array, vector3_to_np_array
+
+FLAG_GRIPPED=False
+
+if FLAG_GRIPPED:
+    from franka_concerto.msg import FusionModel
+    
+
 def rotate_vector_local(vector, axis_local, angle):
     """
     Rota un vector alrededor de un eje local mediante cuaterniones.
@@ -228,6 +236,10 @@ class ROSInterface:
 
         # Set up subscriber for /skeleton_3D
         self.sub_skeleton_3D_keypoints = rospy.Subscriber('/skeleton_3D', Skeleton3D, self.IK_calculator_callback) # Dont forget SELF.
+        
+        if FLAG_GRIPPED:
+            self.kp_subscriber = rospy.Subscriber('/fusion_model', FusionModel, self.fusion_model_callback)
+            self.fusion_model = FusionModel()
 
         # FLAGS de estado
         self.last_valid_kp = True  # Estado anterior de los KP
@@ -253,6 +265,10 @@ class ROSInterface:
                 rospy.loginfo("Datos de /skeleton_3D recibidos nuevamente. Nodo reanudado.")
                 self.is_paused = False
             self.data_received = False  # Reset para la siguiente iteración
+    
+    
+    def fusion_model_callback(self, msg):
+        self.fusion_model = msg
     
     def IK_calculator_callback(self, msg):
         """
@@ -298,6 +314,10 @@ class ROSInterface:
             kp_R_Wrist = keypointsX[10]
             kp_L_Shoulder = keypointsX[5]
 
+            if FLAG_GRIPPED:
+                kp_R_Wrist = point_to_np_array(self.fusion_model.kp_R_wrist_gripped)
+
+        
             human_body.header.stamp = rospy.Time.now()
 
             if are_kp_valid(kp_R_Shoulder, kp_L_Shoulder, kp_R_Elbow, kp_R_Wrist):
@@ -306,6 +326,19 @@ class ROSInterface:
                 if not self.last_valid_kp:
                     rospy.logdebug("Cálculo IK iniciado: keypoints detectados")
                 self.last_valid_kp = True
+
+                # Verificación de la Z de los hombros
+                shoulder_z_error = np.abs(kp_R_Shoulder[2] - kp_L_Shoulder[2])
+                rospy.loginfo(f"kp_R_Shoulder_z ={kp_R_Shoulder[2]}")
+                rospy.loginfo(f"kp_L_Shoulder_z ={kp_L_Shoulder[2]}")
+                rospy.loginfo(f"Error_z_shoulder ={shoulder_z_error}")
+
+                if shoulder_z_error >= 0.05:
+                    rospy.logerr_throttle("ARM IK calculator: Torso no alineado con eje Z. MCI del brazo incorrecto. Corrige tu postura!")
+                    return
+                else:
+                    rospy.logdebug("ARM IK calculator: Postura correcta")
+
                 
                 ################## Longitudes ##################
                 upperarm_length = np.linalg.norm(kp_R_Elbow - kp_R_Shoulder)
