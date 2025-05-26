@@ -1,4 +1,4 @@
-# human_articular_space
+# upper_limb_kinematics
 
 ## Overview
 

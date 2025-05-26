@@ -1,5 +1,7 @@
 # Angulos articulares del espacio articular del brazo
 
+std_msgs/Header header
+
 # Hombro
 float32 q1 # elevacion frontal, plano sagital
 float32 q2 # elevacion lateral, palno frontal

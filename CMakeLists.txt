@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 
-project(human_articular_space) # Project name
+project(upper_limb_kinematics) # Project name
 
 catkin_python_setup() # Para ejecutar el setup.py de la raiz para ubicar los módulos. 
 

@@ -8,14 +8,22 @@ from scipy.spatial.transform import Rotation as R
 from franka_msgs.msg import FrankaState
 from sensor_msgs.msg import JointState
 
+from std_msgs.msg import Bool
+
 # Import custom message types
 from skeleton_3d.msg import Skeleton3D  # Mensaje con info de los KP
-from human_articular_space.msg import RightArm # Mensaje a publicar
+from upper_limb_kinematics.msg import RightArm # Mensaje a publicar
 
-# Importar módulo ubicado en human_articular_space/src/human_articular_space
-from human_articular_space.geometric_utils import are_kp_valid, normalize_vector, calculate_signed_angle_3d, project_Kp_to_plane, rotate_vector_local, calculate_angle_3_points
+# Importar módulo ubicado en upper_limb_kinematics/src/upper_limb_kinematics
+from upper_limb_kinematics.geometric_utils import are_kp_valid, normalize_vector, calculate_signed_angle_3d, project_Kp_to_plane, rotate_vector_local, calculate_angle_3_points
 
-FLAG_GRIPPED=True
+FLAG_GRIPPED=False
+
+"""
+Para probar el switch entre gripper y skeleton:
+rostopic pub /grasp_state std_msgs/Bool "data: True"
+
+"""
 
 class ROSInterface:
 
@@ -27,11 +35,11 @@ class ROSInterface:
         # Inicializar nodo ROS con nombre único
         rospy.init_node('IK_arm', anonymous=False)
 
-        # Get the directory path for the ROS package 'human_articular_space'
+        # Get the directory path for the ROS package 'upper_limb_kinematics'
         try:
-            path = roslib.packages.get_pkg_dir('human_articular_space')
+            path = roslib.packages.get_pkg_dir('upper_limb_kinematics')
         except roslib.packages.InvalidROSPkgException as e:
-            rospy.logerr("The package 'human_articular_space' was not found.")
+            rospy.logerr("The package 'upper_limb_kinematics' was not found.")
             raise e
 
         # ROS publisher/subs
@@ -40,6 +48,7 @@ class ROSInterface:
         
         rospy.Subscriber('/skeleton_3D', Skeleton3D, self.IK_calculator_callback) # Dont forget SELF.
         rospy.Subscriber('/franka_state_controller/franka_states', FrankaState, self.franka_pose_callback)
+        rospy.Subscriber('/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
 
         # FLAGS de estado
         self.last_valid_kp = True  # Estado anterior de los KP
@@ -52,6 +61,25 @@ class ROSInterface:
         self.timer = rospy.Timer(rospy.Duration(self.timeout_duration), self.timeout_callback)
 
         self.position_franka_EE = np.zeros(3)
+        self.flag_gripped = False # A la espera de que se actualice si es necesario
+
+        if FLAG_GRIPPED:
+            rospy.logwarn("Gripper is enabled. Using gripper position for wrist keypoint.")
+        else:
+            rospy.logwarn("Gripper is disabled. Using skeleton keypoint for wrist.")
+
+        rospy.loginfo("IK_arm node initialized successfully.")
+
+    def grasp_state_callback(self, msg):
+
+        if msg.data == True:
+            if msg.data != self.flag_gripped:
+                rospy.loginfo("Gripper is grasping. Using gripper position for wrist keypoint.")
+            self.flag_gripped = True
+        else:
+            if msg.data != self.flag_gripped:
+                rospy.loginfo("Gripper is not grasping. Using skeleton keypoint for wrist.")
+            self.flag_gripped = False
 
     
     def timeout_callback(self, event):
@@ -108,6 +136,7 @@ class ROSInterface:
         """
 
         try:
+
             # Indicar que se han recibido datos
             self.data_received = True
 
@@ -128,8 +157,11 @@ class ROSInterface:
             kp_R_Wrist = keypointsX[10]
             kp_L_Shoulder = keypointsX[5]
 
-            if FLAG_GRIPPED:
+            if self.flag_gripped:
                 kp_R_Wrist = self.position_franka_EE
+
+            # if FLAG_GRIPPED:
+            #     kp_R_Wrist = self.position_franka_EE
 
             right_arm.header.stamp = rospy.Time.now()
 
@@ -142,12 +174,12 @@ class ROSInterface:
 
                 # Verificación de la Z de los hombros
                 shoulder_z_error = np.abs(kp_R_Shoulder[2] - kp_L_Shoulder[2])
-                rospy.loginfo(f"kp_R_Shoulder_z ={kp_R_Shoulder[2]}")
-                rospy.loginfo(f"kp_L_Shoulder_z ={kp_L_Shoulder[2]}")
-                rospy.loginfo(f"Error_z_shoulder ={shoulder_z_error}")
+                # rospy.loginfo(f"kp_R_Shoulder_z ={kp_R_Shoulder[2]}")
+                # rospy.loginfo(f"kp_L_Shoulder_z ={kp_L_Shoulder[2]}")
+                # rospy.loginfo(f"Error_z_shoulder ={shoulder_z_error}")
 
                 if shoulder_z_error >= 0.05:
-                    rospy.logerr_throttle("ARM IK calculator: Torso no alineado con eje Z. MCI del brazo incorrecto. Corrige tu postura!")
+                    rospy.logerr_throttle(5.0, "ARM IK: Torso no alineado con eje Z. Corrige tu postura!")
                     return
                 else:
                     rospy.logdebug("ARM IK calculator: Postura correcta")
@@ -221,24 +253,21 @@ class ROSInterface:
 
 
                 # Publish the right arm angles calculated
-                right_arm_msg = RightArm()
-                right_arm_msg = right_arm
+                self.right_arm_pub.publish(right_arm)
 
-                self.right_arm_pub.publish(right_arm_msg)
-
-                # Publicar joint states
+                ## Publicar joint states
                 joint_state = JointState()
-                joint_state.header = msg.header 
+                joint_state.header.stamp = rospy.Time.now()
 
                 # Right arm assignment
                 joint_state.name = np.array(['right_arm_q1', 'right_arm_q2', 'upperarm_length', 'right_arm_q3', 'right_arm_q4', 'forearm_length', 'right_arm_q5'])
                 
-                joint_state.position = np.array([np.radians(msg.right_arm.q1),
-                                                np.radians(msg.right_arm.q2),
-                                                msg.right_arm.upperarm_length,
-                                                np.radians(msg.right_arm.q3),
-                                                np.radians(msg.right_arm.q4),
-                                                msg.right_arm.forearm_length,
+                joint_state.position = np.array([np.radians(right_arm.q1),
+                                                np.radians(right_arm.q2),
+                                                right_arm.upperarm_length,
+                                                np.radians(right_arm.q3),
+                                                np.radians(right_arm.q4),
+                                                right_arm.forearm_length,
                                                 np.radians(0.0)
                                                 ])
                 
@@ -253,6 +282,8 @@ class ROSInterface:
         except Exception as e:
             # Log any errors that occur during calculate
             rospy.logerr(f"Error calculating angles: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 if __name__ == '__main__':

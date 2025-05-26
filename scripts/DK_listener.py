@@ -9,8 +9,8 @@ from std_msgs.msg import Bool  # Mensaje estándar para notificaciones
 from geometry_msgs.msg import Point
 
 from skeleton_3d.msg import Skeleton3D          # Import custom message type
-from human_articular_space.msg import KP_URDF   # Import custom message type
-from human_articular_space.msg import KP_vision # Import custom message type
+from upper_limb_kinematics.msg import KP_URDF   # Import custom message type
+from upper_limb_kinematics.msg import KP_vision # Import custom message type
 
 def are_kp_valid(*keypoints):
     '''
@@ -27,14 +27,11 @@ class ROSInterface:
         # Initialize the ROS node with a unique name
         rospy.init_node('tf2_listener', anonymous=False)
 
-        # Obtener el namespace del argumento pasado desde el archivo launch
-        self.namespace = rospy.get_param('~namespace1', 'default_namespace')  # Valor por defecto
-
-        # Get the directory path for the ROS package 'human_articular_space'
+        # Get the directory path for the ROS package 'upper_limb_kinematics'
         try:
-            self.path = roslib.packages.get_pkg_dir('human_articular_space')
+            self.path = roslib.packages.get_pkg_dir('upper_limb_kinematics')
         except roslib.packages.InvalidROSPkgException as e:
-            rospy.logerr("The package 'human_articular_space' was not found.")
+            rospy.logerr("The package 'upper_limb_kinematics' was not found.")
             raise e
 
         # Set up a TF2 buffer and listener
@@ -104,6 +101,10 @@ class ROSInterface:
                 TF_R_Shoulder = self.lookup_transform("base_link", "base_shoulder")
                 TF_R_Elbow = self.lookup_transform("base_link", "RightUpperArm")
                 TF_R_Wrist = self.lookup_transform("base_link", "RightForeArm")
+
+                if TF_R_Shoulder is None or TF_R_Elbow is None or TF_R_Wrist is None:
+                    rospy.logwarn("Alguno de los transforms no se ha encontrado. Se omite la publicación de KP_URDF.")
+                    return
 
                 # Publicar KP
                 # Vision. Conversión a Point

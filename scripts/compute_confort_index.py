@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 
 # Import custom message types
-from human_articular_space.msg import HumanBody # Mensaje a subscribirnos
+from upper_limb_kinematics.msg import RightArm # Mensaje a subscribirnos
 
 from franka_concerto.funciones_utiles import calculate_quaternion_0_F, np_array_to_point, np_array_to_vector3, point_to_np_array, vector3_to_np_array
 
@@ -22,15 +22,14 @@ class ROSInterface:
         rospy.init_node('Compute_Confort_Indexes', anonymous=False)
 
         # ROS publisher
-        topic_name = "/human_body/description"
-        rospy.Subscriber(topic_name, HumanBody, self.compute_indexes, queue_size=1)
+        rospy.Subscriber("/right_arm/description", RightArm, self.compute_indexes, queue_size=1)
 
     
     def compute_indexes(self, msg):
         """
         Callback function
         """
-        human_body = msg
+        right_arm = msg
         q = np.array([msg.right_arm.q1, msg.right_arm.q2, msg.right_arm.q3, msg.right_arm.q4])
         q = np.radians(q)
             

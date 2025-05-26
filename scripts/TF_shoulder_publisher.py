@@ -64,11 +64,11 @@ class ROSInterface:
         self.child_id = rospy.get_param('~child_id')
         rospy.loginfo(self.child_id)
 
-        # Get the directory path for the ROS package 'human_articular_space'
+        # Get the directory path for the ROS package 'upper_limb_kinematics'
         try:
-            path = roslib.packages.get_pkg_dir('human_articular_space')
+            path = roslib.packages.get_pkg_dir('upper_limb_kinematics')
         except roslib.packages.InvalidROSPkgException as e:
-            rospy.logerr("The package 'human_articular_space' was not found.")
+            rospy.logerr("The package 'upper_limb_kinematics' was not found.")
             raise e
 
         # Set up subscriber for /skeleton_3D
@@ -128,7 +128,7 @@ if __name__ == '__main__':
             """
             Handles the shutdown of the ROS node, ensuring clean closure of resources.
             """
-            rospy.loginfo("Shutting down human_articular_space_calculator node...")
+            rospy.loginfo("Shutting down TF_shoulder_publisher node...")
 
         # Register a shutdown hook
         rospy.on_shutdown(shutdown_callback)

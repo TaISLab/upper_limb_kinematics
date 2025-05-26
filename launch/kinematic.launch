@@ -4,20 +4,21 @@
     <!--  ROSLAUNCH FILE    (http://wiki.ros.org/roslaunch/)                    -->
     <!--                                                                        -->
     <!--  COMMAND-LINE USAGE:                                                   -->
-    <!--  roslaunch human_articular_space kinematics_right_arm.launch           -->
+    <!--  roslaunch upper_limb_kinematics kinematics_right_arm.launch           -->
     <!--                                                                        -->
     <!--  FLAGS:                                                                -->
     <!--  use_rviz:         use_rviz:=true / use_rviz:=false                    -->
     <!--  use_DK_listener: use_DK_listener:=true / use_DK_listener:=false    -->
     <!--                                                                        -->
     <!--  EXAMPLES:                                                             -->
-    <!--  (1) roslaunch human_articular_space kinematics_right_arm.launch use_rviz:=false use_DK_listener:=false    -->
-    <!--  (2) roslaunch human_articular_space kinematics_right_arm.launch use_rviz:=true use_DK_listener:=true      -->
+    <!--  (1) roslaunch upper_limb_kinematics kinematics_right_arm.launch use_rviz:=false use_DK_listener:=false    -->
+    <!--  (2) roslaunch upper_limb_kinematics kinematics_right_arm.launch use_rviz:=true use_DK_listener:=true      -->
     <!-- ***********************************************************************-->
 
     <!-- Argumentos de configuración del launch -->
     <arg name="use_rviz" default="true" />
     <arg name="use_DK_listener" default="true" doc="Lanza un listener a las TF de ROS"/>
+    <arg name="franka_control" default="true" doc="Lanza el nodo de control de franka para poder usar su EE como wrist"/>
     
 
     <group ns="right_arm">
@@ -27,13 +28,13 @@
         <arg name="visual_forearm_length" default="0.25"/>
 
         <!-- URDF del brazo derecho -->
-        <param name="/right_arm_description" command="$(find xacro)/xacro $(find human_articular_space)/urdf/human_right_arm.xacro visual_upperarm_length:=$(arg visual_upperarm_length) visual_forearm_length:=$(arg visual_forearm_length)" />
+        <param name="/right_arm_description" command="$(find xacro)/xacro $(find upper_limb_kinematics)/urdf/human_right_arm.xacro visual_upperarm_length:=$(arg visual_upperarm_length) visual_forearm_length:=$(arg visual_forearm_length)" />
 
         <!-- Nodo para el cálculo de la cinematica inversa del brazo -->
-        <node name="IK" pkg="human_articular_space" type="IK_arm.py" required="true" output="screen" />
+        <node name="IK" pkg="upper_limb_kinematics" type="IK_arm.py" required="true" output="screen" />
 
         <!-- TF del hombro -->
-        <node name="TF_shoulder_publisher" pkg="human_articular_space" type="TF_shoulder_publisher.py" required="true" output="log" >
+        <node name="TF_shoulder_publisher" pkg="upper_limb_kinematics" type="TF_shoulder_publisher.py" required="true" output="log" >
             <param name="child_id" value="base_shoulder" />
         </node>
 
@@ -44,18 +45,22 @@
 
         <group if="$(arg use_DK_listener)">
             <!-- Lanzar Cinemática directa -->
-            <node name="DK_listener" pkg="human_articular_space" type="DK_listener.py" required="false" respawn="false"/>
+            <node name="DK_listener" pkg="upper_limb_kinematics" type="DK_listener.py" required="false" respawn="false"/>
         </group>
 
     </group>
 
+    <!-- Nodo franka_control para usar su EE como wrist -->
+    <group if="$(arg franka_control)">
+        <include file="$(find franka_control)/launch/franka_control.launch"/>
+    </group>
 
     <!-- Transformación estática entre base_link y fr3_link0. Esto permite poder ver el URDF del robot en el RViz del brazo  -->
     <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf_FR3" args="0 0 0 0 0 0 1 base_link fr3_link0" />
 
     <group if="$(arg use_rviz)">
         <!-- Lanzar RViz con una configuración predeterminada -->
-        <node name="rviz_arm" pkg="rviz" type="rviz" args="-d $(find human_articular_space)/rviz/config_right_arm.rviz" required="false" respawn="false"/>
+        <node name="rviz_arm" pkg="rviz" type="rviz" args="-d $(find upper_limb_kinematics)/rviz/config_right_arm.rviz" required="false" respawn="false"/>
     </group>
 
 
