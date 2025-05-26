@@ -6,6 +6,8 @@ import tf2_ros
 import tf_conversions
 import geometry_msgs.msg
 import roslib.packages
+import tf
+import math
 
 from geometry_msgs.msg import Point
 from scipy.spatial.transform import Rotation as R
@@ -19,31 +21,36 @@ def are_kp_valid(*keypoints):
     '''
     return not any(np.all(kp == 0.0) for kp in keypoints)
 
-def calculate_yaw(kp_R_Shoulder, kp_L_Shoulder):
-    """
-    Calcula el ángulo yaw para un TF. 
-    Este ángulo representa la orientación entre el Eje Y del Mundo (base_link) y el vector de hombros
-    vector de hombros: hombro_izquierdo-hombro_derecho
 
-    Parameters:
-    - kp_R_Shoulder: Coordenadas (x, y, z) del hombro derecho.
-    - kp_L_Shoulder: Coordenadas (x, y, z) del hombro izquierdo.
+def angle_between_vectors_360(v1, v2):
+    """
+    Calculate the angle between two 2D vectors in the XY plane, returning a value in radians between 0 and 2pi.
+
+    Args:
+        v1 (array): The first 2D vector [x, y].
+        v2 (array): The second 2D vector [x, y].
 
     Returns:
-    - yaw: Ángulo en radianes.
+        float: The angle between the two vectors in radians, ranging from 0 to 2pi.
     """
-    # Calcular el vector del hombro
-    shoulder_vector = np.array(kp_L_Shoulder) - np.array(kp_R_Shoulder)
 
-    # Calcular yaw en el plano XY
-    y_ref = np.array([0, 1, 0])
-    num = np.dot(y_ref, shoulder_vector)
-    den = np.linalg.norm(y_ref) * np.linalg.norm(shoulder_vector)
+    # NOTA: ATAN2 MIDE EL ÁNGULO ENTRE LAS DOS COMPONENTES DEL VECTOR EN EL PLANO XY MEDIDO SOBRE X
+    #       Nosotros necesitamos el ángulo entre Y y Vector. Luego -90, que nos lo da el theta2.
+    #       O de manera general, como se propone en esta función:
+    
+    theta1 = np.arctan2(v1[1], v1[0])
+    
+    theta2 = np.arctan2(v2[1], v2[0])
+    
+    delta = theta2 - theta1
+    if delta < 0:
+        delta += 2 * np.pi
 
-    cos_theta = np.clip(num / den, -1.0, 1.0) # -1.0 y 1.0 son los límites del cos
-    yaw = np.arccos(cos_theta) 
+    # rospy.loginfo(f"DEBUG theta1 deg = {math.degrees(theta1)}")
+    # rospy.loginfo(f"DEBUG theta2 deg = {math.degrees(theta2)}")
+    # rospy.loginfo(f"DEBUG delta deg = {math.degrees(delta)}")
 
-    return yaw
+    return delta  # en radianes entre 0 y 2pi
 
 
 class ROSInterface:
@@ -94,15 +101,12 @@ class ROSInterface:
             t.transform.translation.x = kp_R_Shoulder[0]
             t.transform.translation.y = kp_R_Shoulder[1]
             t.transform.translation.z = kp_R_Shoulder[2]
+        
+            shoulder_vector = np.array(kp_L_Shoulder) - np.array(kp_R_Shoulder)
 
-            # yaw_calculated = calculate_yaw(kp_R_Shoulder, kp_L_Shoulder)
-            
-            # roll_calculated = calculate_roll(kp_R_Shoulder, kp_L_Shoulder)
-            # q = tf_conversions.transformations.quaternion_from_euler(-roll_calculated, 0, 1.5708+yaw_calculated)
-            
-            # Simplificacion: Los hombros no rotan en x
-            yaw_calculated = calculate_yaw(kp_R_Shoulder, kp_L_Shoulder)
-            q = tf_conversions.transformations.quaternion_from_euler(0, 0, -yaw_calculated)
+            y_ref = np.array([0, 1, 0])
+            yaw_calculated = angle_between_vectors_360(y_ref, shoulder_vector)
+            q = tf_conversions.transformations.quaternion_from_euler(0, 0, yaw_calculated)
 
             t.transform.rotation.x = q[0]
             t.transform.rotation.y = q[1]

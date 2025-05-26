@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(human_articular_space) # Project name
 
+catkin_python_setup() # Para ejecutar el setup.py de la raiz para ubicar los módulos. 
+
 ## Find the necessary ROS packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
@@ -17,12 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
 
-  # From IK_arm_calculator.py
-  HumanBody.msg
-  DHAnglesArm.msg
-
-  # From tf2_listener.py
-  KP_URDF.msg
+  RightArm.msg  # From IK_arm_calculator.py
+  KP_URDF.msg   # From DK_listener.py
   KP_vision.msg # DEBUG only
 )
 
@@ -53,10 +51,10 @@ include_directories(
 
 ## Install Python executable scripts
 install(PROGRAMS
-  scripts/IK_arm_calculator.py
-  scripts/human_body_to_joint_states_converter.py
-  scripts/pose_shoulder_TF_publisher.py
-  scripts/tf2_listener.py
+  scripts/IK_arm.py
+  scripts/DK_listener.py
+  scripts/TF_shoulder_publisher.py
+  scripts/compute_confort_index.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
