@@ -4,13 +4,15 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /TF1
+        - /TF1/Tree1
+        - /skeleton_3d1
         - /human_description1/Right Arm URDF1
-        - /q_dot_d1/q3_dot_d1
         - /q_dot_d1/q4_dot_d1
         - /gripper_4f1/gripper_4f URDF1
-      Splitter Ratio: 0.6293333172798157
-    Tree Height: 392
+      Splitter Ratio: 0.6970587968826294
+    Tree Height: 688
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -29,8 +31,6 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: PointCloud
-  - Class: rviz_visual_tools/RvizVisualToolsGui
-    Name: RvizVisualToolsGui
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -41,7 +41,7 @@ Visualization Manager:
     - Alpha: 0.5
       Cell Size: 1
       Class: rviz/Grid
-      Color: 160; 160; 164
+      Color: 46; 52; 54
       Enabled: true
       Line Style:
         Line Width: 0.029999999329447746
@@ -79,19 +79,23 @@ Visualization Manager:
         RightForeArm:
           Value: true
         RightForeArm_f1:
-          Value: true
+          Value: false
         RightForeArm_f2:
           Value: false
         RightShoulder_f1:
-          Value: false
+          Value: true
         RightShoulder_f2:
           Value: false
         RightUpperArm:
           Value: false
         RightUpperArm_f1:
           Value: false
-        base_link:
+        Wrist:
           Value: false
+        base_gripper:
+          Value: false
+        base_link:
+          Value: true
         base_shoulder:
           Value: true
         camera1_aligned_depth_to_color_frame:
@@ -182,7 +186,79 @@ Visualization Manager:
           Value: false
         camera4_link:
           Value: false
+        dedo1_link0:
+          Value: false
+        dedo1_link02:
+          Value: false
+        dedo1_link1:
+          Value: false
+        dedo1_link2:
+          Value: false
+        dedo2_link0:
+          Value: false
+        dedo2_link02:
+          Value: false
+        dedo2_link1:
+          Value: false
+        dedo2_link2:
+          Value: false
+        dedo3_link0:
+          Value: false
+        dedo3_link02:
+          Value: false
+        dedo3_link1:
+          Value: false
+        dedo3_link2:
+          Value: false
+        dedo4_link0:
+          Value: false
+        dedo4_link02:
+          Value: false
+        dedo4_link1:
+          Value: false
+        dedo4_link2:
+          Value: false
+        fr3_EE:
+          Value: false
+        fr3_K:
+          Value: true
+        fr3_NE:
+          Value: false
         fr3_link0:
+          Value: false
+        fr3_link0_sc:
+          Value: false
+        fr3_link1:
+          Value: false
+        fr3_link1_sc:
+          Value: false
+        fr3_link2:
+          Value: false
+        fr3_link2_sc:
+          Value: false
+        fr3_link3:
+          Value: false
+        fr3_link3_sc:
+          Value: false
+        fr3_link4:
+          Value: false
+        fr3_link4_sc:
+          Value: false
+        fr3_link5:
+          Value: false
+        fr3_link5_sc:
+          Value: false
+        fr3_link6:
+          Value: false
+        fr3_link6_sc:
+          Value: false
+        fr3_link7:
+          Value: false
+        fr3_link7_sc:
+          Value: false
+        fr3_link8:
+          Value: false
+        soporte_gripper:
           Value: false
       Marker Alpha: 1
       Marker Scale: 1
@@ -200,9 +276,10 @@ Visualization Manager:
                     RightForeArm_f1:
                       RightForeArm_f2:
                         RightForeArm:
-                          RightFakeHand:
-                            RightFakeFingers:
-                              {}
+                          Wrist:
+                            RightFakeHand:
+                              RightFakeFingers:
+                                {}
           camera1_bottom_screw_frame:
             camera1_link:
               camera1_aligned_depth_to_color_frame:
@@ -272,24 +349,161 @@ Visualization Manager:
           camera4_color_optical_frame:
             {}
           fr3_link0:
-            {}
+            fr3_link0_sc:
+              {}
+            fr3_link1:
+              fr3_link1_sc:
+                {}
+              fr3_link2:
+                fr3_link2_sc:
+                  {}
+                fr3_link3:
+                  fr3_link3_sc:
+                    {}
+                  fr3_link4:
+                    fr3_link4_sc:
+                      {}
+                    fr3_link5:
+                      fr3_link5_sc:
+                        {}
+                      fr3_link6:
+                        fr3_link6_sc:
+                          {}
+                        fr3_link7:
+                          fr3_link7_sc:
+                            {}
+                          fr3_link8:
+                            fr3_NE:
+                              fr3_EE:
+                                fr3_K:
+                                  {}
+                            soporte_gripper:
+                              base_gripper:
+                                dedo1_link0:
+                                  dedo1_link02:
+                                    {}
+                                dedo1_link1:
+                                  dedo1_link2:
+                                    {}
+                                dedo2_link0:
+                                  dedo2_link02:
+                                    {}
+                                dedo2_link1:
+                                  dedo2_link2:
+                                    {}
+                                dedo3_link0:
+                                  dedo3_link02:
+                                    {}
+                                dedo3_link1:
+                                  dedo3_link2:
+                                    {}
+                                dedo4_link0:
+                                  dedo4_link02:
+                                    {}
+                                dedo4_link1:
+                                  dedo4_link2:
+                                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
-      Enabled: false
+      Enabled: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        fr3_link0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link0_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link1_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link2_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link3_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link4_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link5_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link6_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link7_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        fr3_link8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: Franka FR3 Model
       Robot Description: robot_description
       TF Prefix: ""
       Update Interval: 0
-      Value: false
+      Value: true
       Visual Enabled: true
     - Class: rviz/Group
       Displays:
@@ -419,6 +633,10 @@ Visualization Manager:
               Alpha: 1
               Show Axes: false
               Show Trail: false
+            Wrist:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
             base_shoulder:
               Alpha: 1
               Show Axes: false
@@ -501,52 +719,52 @@ Visualization Manager:
     - Class: rviz/Group
       Displays:
         - Alpha: 1
-          Angular Arrow Scale: 10
+          Angular Arrow Scale: 0.5
           Angular Color: 204; 204; 51
-          Arrow Width: 0.30000001192092896
+          Arrow Width: 0.5
           Class: rviz/TwistStamped
           Enabled: true
           Hide Small Values: false
           History Length: 1
-          Linear Arrow Scale: 200
+          Linear Arrow Scale: 1
           Linear Color: 204; 51; 51
           Name: q1_dot_d
-          Queue Size: 1
+          Queue Size: 10
           Topic: /rviz_q1_dot_d
           Unreliable: false
           Value: true
         - Alpha: 1
-          Angular Arrow Scale: 10
+          Angular Arrow Scale: 0.5
           Angular Color: 204; 204; 51
-          Arrow Width: 0.30000001192092896
+          Arrow Width: 0.5
           Class: rviz/TwistStamped
           Enabled: true
           Hide Small Values: false
           History Length: 1
-          Linear Arrow Scale: 200
+          Linear Arrow Scale: 1
           Linear Color: 204; 51; 51
           Name: q2_dot_d
-          Queue Size: 1
+          Queue Size: 10
           Topic: /rviz_q2_dot_d
           Unreliable: false
           Value: true
         - Alpha: 1
-          Angular Arrow Scale: 10
+          Angular Arrow Scale: 0.5
           Angular Color: 204; 204; 51
-          Arrow Width: 0.30000001192092896
+          Arrow Width: 0.5
           Class: rviz/TwistStamped
           Enabled: true
           Hide Small Values: false
           History Length: 1
-          Linear Arrow Scale: 200
+          Linear Arrow Scale: 1
           Linear Color: 204; 51; 51
           Name: q3_dot_d
-          Queue Size: 1
+          Queue Size: 10
           Topic: /rviz_q3_dot_d
           Unreliable: false
           Value: true
         - Alpha: 1
-          Angular Arrow Scale: 10
+          Angular Arrow Scale: 1
           Angular Color: 204; 204; 51
           Arrow Width: 0.30000001192092896
           Class: rviz/TwistStamped
@@ -556,11 +774,11 @@ Visualization Manager:
           Linear Arrow Scale: 200
           Linear Color: 204; 51; 51
           Name: q4_dot_d
-          Queue Size: 1
+          Queue Size: 10
           Topic: /rviz_q4_dot_d
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: q_dot_d
     - Class: rviz/Group
       Displays:
@@ -574,8 +792,98 @@ Visualization Manager:
             Expand Link Details: false
             Expand Tree: false
             Link Tree Style: Links in Alphabetic Order
+            base_gripper:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            soporte_gripper:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
           Name: gripper_4f URDF
-          Robot Description: /gripper_4f/robot_description
+          Robot Description: /gripper_4f_description
           TF Prefix: ""
           Update Interval: 0
           Value: true
@@ -587,7 +895,7 @@ Visualization Manager:
       Angular Color: 204; 204; 51
       Arrow Width: 0.5
       Class: rviz/TwistStamped
-      Enabled: true
+      Enabled: false
       Hide Small Values: true
       History Length: 1
       Linear Arrow Scale: 20
@@ -596,63 +904,25 @@ Visualization Manager:
       Queue Size: 10
       Topic: /trajectory_tracker/v_desired
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
-      Angular Arrow Scale: 10
+      Angular Arrow Scale: 5
       Angular Color: 204; 204; 51
       Arrow Width: 0.5
       Class: rviz/TwistStamped
       Enabled: false
       Hide Small Values: false
       History Length: 1
-      Linear Arrow Scale: 200
+      Linear Arrow Scale: 20
       Linear Color: 204; 51; 51
       Name: v_desired_franka
       Queue Size: 10
       Topic: /rviz_v_desired
       Unreliable: false
       Value: false
-    - Alpha: 1
-      Class: rviz/Effort
-      Enabled: true
-      History Length: 1
-      Joints:
-        fr3_joint1:
-          Value: true
-        fr3_joint2:
-          Value: true
-        fr3_joint3:
-          Value: true
-        fr3_joint4:
-          Value: true
-        fr3_joint5:
-          Value: true
-        fr3_joint6:
-          Value: true
-        fr3_joint7:
-          Value: true
-        right_arm_q1:
-          Value: true
-        right_arm_q2:
-          Value: true
-        right_arm_q3:
-          Value: true
-        right_arm_q4:
-          Value: true
-        right_arm_q5:
-          Value: true
-      Name: Esfuerzo articular humano
-      Queue Size: 10
-      Robot Description: /right_arm_description
-      Scale: 0.699999988079071
-      TF Prefix: ""
-      Topic: /right_arm/joint_states_with_dynamics
-      Unreliable: false
-      Value: true
-      Width: 0.009999999776482582
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 186; 189; 182
     Default Light: true
     Fixed Frame: base_link
     Frame Rate: 30
@@ -678,7 +948,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.018867254257202
+      Distance: 1.5817034244537354
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -686,27 +956,25 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.6350901126861572
-        Y: 0.06585273891687393
-        Z: 0.9759657382965088
+        X: 0.5368644595146179
+        Y: -0.24430395662784576
+        Z: 0.5109682679176331
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3747965097427368
+      Pitch: 0.27979540824890137
       Target Frame: <Fixed Frame>
-      Yaw: 0.9512863159179688
+      Yaw: 0.5862558484077454
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 582
+  Height: 985
   Hide Left Dock: false
-  Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000017900000213fc0200000009fb000000100044006900730070006c006100790073010000001600000213000000c900fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000024005200760069007a00560069007300750061006c0054006f006f006c00730047007500690000000336000000410000004100ffffff0000000100000156000003a5fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000016000003a5000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000021c00000172fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000040a000000c9fc0100000002fb0000000800540069006d006500000000000000040a0000041800fffffffb0000000800540069006d006501000000000000045000000000000000000000031a0000021300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730000000000ffffffff0000000000000000
-  RvizVisualToolsGui:
-    collapsed: false
+  Hide Right Dock: true
+  QMainWindow State: 000000ff00000000fd0000000400000000000001560000033bfc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000033b000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f0000033cfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d0000033c000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000055a0000003efc0100000002fb0000000800540069006d006501000000000000055a000003bc00fffffffb0000000800540069006d00650100000000000004500000000000000000000003fe0000033b00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -714,7 +982,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: false
-  Width: 1177
-  X: 1971
-  Y: 143
+    collapsed: true
+  Width: 1370
+  X: 189
+  Y: 27

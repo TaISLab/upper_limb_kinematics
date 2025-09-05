@@ -24,11 +24,11 @@
     <group ns="right_arm">
 
         <!-- Parámetros visuales del URDF-->
-        <arg name="visual_upperarm_length" default="0.3"/>
-        <arg name="visual_forearm_length" default="0.25"/>
+        <arg name="upperarm_length" default="0.3"/>
+        <arg name="forearm_length" default="0.25"/>
 
         <!-- URDF del brazo derecho -->
-        <param name="/right_arm_description" command="$(find xacro)/xacro $(find upper_limb_kinematics)/urdf/human_right_arm.xacro visual_upperarm_length:=$(arg visual_upperarm_length) visual_forearm_length:=$(arg visual_forearm_length)" />
+        <param name="/right_arm_description" command="$(find xacro)/xacro $(find upper_limb_kinematics)/urdf/human_right_arm_sept.xacro upperarm_length:=$(arg upperarm_length) forearm_length:=$(arg forearm_length)" />
 
         <!-- Nodo para el cálculo de la cinematica inversa del brazo -->
         <node name="IK" pkg="upper_limb_kinematics" type="IK_arm.py" required="true" output="screen" />
@@ -48,6 +48,9 @@
             <node name="DK_listener" pkg="upper_limb_kinematics" type="DK_listener.py" required="false" respawn="false"/>
         </group>
 
+        <!-- Nodo para el cálculo de la dinámica, matriz jacobiana, matriz de gravedad -->
+        <include file="$(find upper_limb_kinematics)/launch/dynamics.launch" />
+            
     </group>
 
     <!-- Nodo franka_control para usar su EE como wrist -->

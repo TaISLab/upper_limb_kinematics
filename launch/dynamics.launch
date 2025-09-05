@@ -1,0 +1,22 @@
+<launch>
+  <!-- Cálculo de la matriz jacobiana                                  -->
+  <!-- Se usa la librería PyKDL, encargada de la cinemática y dinámica -->
+  <!-- Rodrigo Castro Ochoa, 2025                                      -->
+
+  <!-- argumentos con valores por defecto -->
+  <arg name="urdf_param"          default="/right_arm_description"/>
+  <arg name="initial_link"        default="base_shoulder"/>
+  <arg name="final_link"          default="RightForeArm"/>
+  <arg name="joint_states_topic"  default="/right_arm/joint_states"/>
+  <arg name="debug"               default="true"/>
+
+  <!--  Nodo para el cálculo de la dinámica -->
+  <node pkg="upper_limb_kinematics" name="dynamics_node" type="dynamics.py" output="screen" required="true">
+      <param name="urdf_param"         value="$(arg urdf_param)"/>
+      <param name="initial_link"          value="$(arg initial_link)"/>
+      <param name="final_link"           value="$(arg final_link)"/>
+      <param name="joint_states_topic" value="$(arg joint_states_topic)"/>
+      <param name="debug"              value="$(arg debug)"/>
+  </node>
+
+</launch>

@@ -14,3 +14,10 @@ float32 q5 # pronacion/supinacion
 # Longitudes
 float32 upperarm_length
 float32 forearm_length
+
+# KP
+geometry_msgs/Point right_shoulder
+geometry_msgs/Point right_elbow
+geometry_msgs/Point right_wrist
+
+geometry_msgs/Point left_shoulder

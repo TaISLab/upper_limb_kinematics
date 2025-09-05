@@ -1,0 +1,197 @@
+<?xml version="1.0"?>
+
+<!-- Modelo del brazo derecho. Parametrizada con xacro-->
+<!-- Modelo con dos articulaciones prismaticas -->
+<!-- Sept. Masas e inercias -->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="human_right_arm">
+
+<!-- Longitudes -->
+<xacro:property name="upperarm_length" value="$(arg upperarm_length)"/>
+<xacro:property name="forearm_length" value="$(arg forearm_length)"/>
+
+<!-- Fuente de masas e inercias: Chandler et al., 1975.
+@techreport{chandler1975investigation,
+  title={Investigation of inertial properties of the human body},
+  author={Chandler, RF and Clauser, Charles E and McConville, John T and Reynolds, HM and Young, John W},
+  year={1975}
+}
+Avaliable online: https://apps.dtic.mil/sti/html/tr/ADA016485/
+-->
+
+<!-- Masas -->
+<xacro:property name="upperarm_mass" value="1.842"/> <!-- Masa del upperarm en kg -->
+<xacro:property name="forearm_mass" value="1.1132"/> <!-- Masa del forearm en kg -->
+<xacro:property name="hand_mass" value="0.4004"/> <!-- Masa de la mano en kg -->
+
+<!-- Inercias -->
+<xacro:property name="upperarm_ixx" value="0.0133"/>
+<xacro:property name="upperarm_iyy" value="0.01327"/>
+<xacro:property name="upperarm_izz" value="0.0022"/>
+
+<xacro:property name="forearm_ixx" value="0.00669"/>
+<xacro:property name="forearm_iyy" value="0.00645"/>
+<xacro:property name="forearm_izz" value="0.00088"/>
+
+<xacro:property name="hand_iyy" value="0.000754"/>
+<xacro:property name="hand_ixx" value="0.000615"/>
+<xacro:property name="hand_izz" value="0.000215"/>
+
+
+
+
+<material name="color">
+    <color rgba="0.1 0.1 0.1 1"/>
+</material>
+
+<link name="base_shoulder"/> <!-- Original del modelo URDF base. Sin embargo, no es util nuestro porque debería de estar alineado con el hombro. Alternativa: Considerar la siguiente TF como la inicial-->
+
+<link name="RightShoulder_f1" />
+
+<link name="RightShoulder_f2" />
+
+<link name="RightUpperArm_f1" />
+
+<link name="RightUpperArm">
+    <visual>
+        <origin xyz="0 0 ${-upperarm_length/2}" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${upperarm_length}" radius="0.04"/>
+        </geometry>
+        <material name="color"/>
+    </visual>
+
+    <inertial>
+        <origin xyz="0 0 ${-upperarm_length/2}" rpy="0 0 0"/>
+        <mass value="${upperarm_mass}"/>
+        <inertia ixx="${upperarm_ixx}" ixy="0" ixz="0" iyy="${upperarm_iyy}" iyz="0" izz="${upperarm_izz}"/>
+    </inertial>
+
+</link>
+
+<link name="RightForeArm_f1" />
+
+<link name="RightForeArm_f2" />
+
+<link name="RightForeArm">
+    <visual>
+        <origin xyz="0 0 ${-forearm_length/2}" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${forearm_length}" radius="0.03"/>
+        </geometry>
+        <material name="color"/>
+    </visual>
+
+    <inertial>
+        <origin xyz="0 0 ${-forearm_length/2}" rpy="0 0 0"/>
+        <mass value="${forearm_mass}"/>
+        <inertia ixx="${forearm_ixx}" ixy="0" ixz="0" iyy="${forearm_iyy}" iyz="0" izz="${forearm_izz}"/>
+    </inertial>
+
+</link>
+
+<!-- Mano derecha -->
+<link name="RightFakeHand">
+    <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <box size="0.1 0.02 0.1"/> <!-- Tamaño del box (largo x ancho x alto) -->
+        </geometry>
+        <material name="color"/>
+    </visual>
+
+    <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${hand_mass}"/>
+        <inertia ixx="${hand_ixx}" ixy="0" ixz="0" iyy="${hand_iyy}" iyz="0" izz="${hand_izz}"/>
+    </inertial>
+</link>
+
+<link name="RightFakeFingers">
+    <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <box size="0.07 0.01 0.05"/> <!-- Tamaño del box (largo x ancho x alto) -->
+        </geometry>
+        <material name="color"/>
+    </visual>
+</link>
+
+<!-- ARTICULACIONES -->
+<!-- Elevación del hombro (q1) -->
+<joint name="right_arm_q1" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+    <parent link="base_shoulder"/>
+    <child link="RightShoulder_f1"/>
+    <limit effort="30" velocity="1.0" lower="-0.5235987756" upper="2.61799387799"/> <!-- -30º a 150º -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Movimiento frontal del hombro (q2) -->
+<joint name="right_arm_q2" type="revolute">
+    <origin xyz="0 0 0" rpy="0 -1.5708 0 "/> <!-- α = 90° -->
+    <parent link="RightShoulder_f1"/>
+    <child link="RightShoulder_f2"/>
+    <limit effort="30" velocity="1.0" lower="-0.5235987756" upper="2.26892802759"/> <!-- -30º a 130º -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- ARTICULACION PRISMATICA DE LONGITUD DEL UPPERARM -->
+<joint name="upperarm_length" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="RightShoulder_f2"/>
+    <child link="RightUpperArm_f1"/>
+    <limit effort="30" velocity="1.0" lower="0.1" upper="0.5"/> <!-- de 0.2m a 0.35m -->
+    <axis xyz="0 -1 0"/> <!-- Extensión en el eje Z -->
+</joint>
+
+<!-- Rotación interna/externa del hombro (q3) -->
+<joint name="right_arm_q3" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 3.14159 0"/> <!-- d = 0.27m, α = 90° -->
+    <parent link="RightUpperArm_f1"/>
+    <child link="RightUpperArm"/>
+    <limit effort="30" velocity="1.0" lower="-1.57079632679" upper="1.57079632679"/> <!--  -90° a 90°-->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Flexión del codo (q4) -->
+<joint name="right_arm_q4" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 1.5708 0"/> <!-- d = -0.28m, α = -90°. Original: rpy="0 -1.5708 0" -->
+    <parent link="RightUpperArm"/>
+    <child link="RightForeArm_f1"/>
+    <limit effort="30" velocity="1.0" lower="0" upper="3.14159"/> <!-- 0° a 180° -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- ARTICULACION PRISMATICA DE LONGITUD DEL FOREARM -->
+<joint name="forearm_length" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="RightForeArm_f1"/>
+    <child link="RightForeArm_f2"/>
+    <limit effort="30" velocity="1.0" lower="0.1" upper="0.5"/> <!-- de 0.2m a 0.35m -->
+    <axis xyz="1 0 0"/> <!-- Extensión en el eje Z -->
+</joint>
+
+<!-- Pronación/supinación del antebrazo (q5) -->
+<joint name="right_arm_q5" type="revolute">
+    <origin xyz="0 0 0" rpy="0 1.5708 0 "/> <!-- d = -0.25m, α = 90° -->
+    <parent link="RightForeArm_f2"/>
+    <child link="RightForeArm"/>
+    <limit effort="30" velocity="1.0" lower="0" upper="3.14159"/> <!-- 0° a 180° -->
+    <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
+</joint>
+
+<!-- Mano derecha. Se divide en dos partes -->
+<joint name="jRighthand_f1_fixed" type="fixed">
+    <origin xyz="0 0 0.05" rpy="0 0 0 "/> <!-- l_box/ 2 -->
+    <parent link="RightForeArm"/>
+    <child link="RightFakeHand"/>
+</joint>
+
+<joint name="jRighthand_f2_fixed" type="fixed">
+    <origin xyz="-0.015 0.005 0.075" rpy="0 0 0 "/> <!-- l_box/ 2 -->
+    <parent link="RightFakeHand"/>
+    <child link="RightFakeFingers"/>
+</joint>
+
+</robot>

@@ -54,6 +54,9 @@
     </visual>
 </link>
 
+<link name="Wrist"/> <!-- Eslabón de la muñeca. Su orientación es la del manipulador si le agarrase normal para q5=90 -->
+
+
 <!-- Representación de la mano derecha -->
 <link name="RightFakeHand">
     <visual>
@@ -139,10 +142,17 @@
     <axis xyz="0 0 1"/> <!-- Rotación alrededor de Z -->
 </joint>
 
+<!-- Articulaciones fijas de la mano -->
+<joint name="jRighthand_f0_fixed" type="fixed">
+    <origin xyz="0 0 0" rpy="0 1.5708 0 "/>
+    <parent link="RightForeArm"/>
+    <child link="Wrist"/>
+</joint>
+
 <!-- Articulaciones fijas de la mano. Entre los eslabones visuales de la mano. Se divide en dos partes -->
 <joint name="jRighthand_f1_fixed" type="fixed">
-    <origin xyz="0 0 0.05" rpy="0 0 0 "/> <!-- l_box/ 2 -->
-    <parent link="RightForeArm"/>
+    <origin xyz="-0.05 0 0" rpy="0 -1.5708 0 "/> <!-- l_box/ 2 -->
+    <parent link="Wrist"/>
     <child link="RightFakeHand"/>
 </joint>
 

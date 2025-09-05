@@ -8,11 +8,11 @@ from scipy.spatial.transform import Rotation as R
 from franka_msgs.msg import FrankaState
 from sensor_msgs.msg import JointState
 
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int32
 
 # Import custom message types
 from skeleton_3d.msg import Skeleton3D  # Mensaje con info de los KP
-from upper_limb_kinematics.msg import RightArm # Mensaje a publicar
+from upper_limb_kinematics.msg import RightArm, RightArmState # Mensaje a publicar
 
 # Importar módulo ubicado en upper_limb_kinematics/src/upper_limb_kinematics
 from upper_limb_kinematics.geometric_utils import are_kp_valid, normalize_vector, calculate_signed_angle_3d, project_Kp_to_plane, rotate_vector_local, calculate_angle_3_points
@@ -43,12 +43,13 @@ class ROSInterface:
             raise e
 
         # ROS publisher/subs
-        self.right_arm_pub = rospy.Publisher('description', RightArm, queue_size=1) # Definir sin la / barra proporciona flexibilidad para cambiar el namespace del topic en un futuro
+        self.right_arm_pub = rospy.Publisher('current_state', RightArmState, queue_size=1) # Definir sin la / barra proporciona flexibilidad para cambiar el namespace del topic en un futuro
         self.joint_state_pub = rospy.Publisher('joint_states', JointState, queue_size=1) 
         
         rospy.Subscriber('/skeleton_3D', Skeleton3D, self.IK_calculator_callback) # Dont forget SELF.
         rospy.Subscriber('/franka_state_controller/franka_states', FrankaState, self.franka_pose_callback)
-        rospy.Subscriber('/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
+        rospy.Subscriber('/gripper_4f/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
+        rospy.Subscriber('/gripper_4f/q5_buttons', Int32, self.q5_input_callback) # Para recibir el input de q5 desde el joystick
 
         # FLAGS de estado
         self.last_valid_kp = True  # Estado anterior de los KP
@@ -60,8 +61,10 @@ class ROSInterface:
         self.timeout_duration = 1.0  # Segundos antes de entrar en pausa
         self.timer = rospy.Timer(rospy.Duration(self.timeout_duration), self.timeout_callback)
 
+        # Agarre
         self.position_franka_EE = np.zeros(3)
         self.flag_gripped = False # A la espera de que se actualice si es necesario
+        self.q5_input = 90 # Valor por defecto de q5. Se actualiza con el joystick
 
         if FLAG_GRIPPED:
             rospy.logwarn("Gripper is enabled. Using gripper position for wrist keypoint.")
@@ -69,6 +72,13 @@ class ROSInterface:
             rospy.logwarn("Gripper is disabled. Using skeleton keypoint for wrist.")
 
         rospy.loginfo("IK_arm node initialized successfully.")
+
+    def q5_input_callback(self, msg):
+        """
+        Callback function to receive the input for q5 from the joystick.
+        """
+        self.q5_input = msg.data
+        rospy.loginfo(f"Received q5 supination from franka buttons: {self.q5_input} degrees")
 
     def grasp_state_callback(self, msg):
 
@@ -142,7 +152,7 @@ class ROSInterface:
 
             # Convert the received messages into a list of 3D keypoint arrays. Transform to ros msg to numpy vector
             keypointsX = np.array([(kp.x, kp.y, kp.z) for kp in msg.keypoints])
-            right_arm = RightArm() # msg a construir
+            right_arm = RightArmState() # msg a construir
 
             # Guide of Kp
             #  5 left_shoulder
@@ -163,7 +173,7 @@ class ROSInterface:
             # if FLAG_GRIPPED:
             #     kp_R_Wrist = self.position_franka_EE
 
-            right_arm.header.stamp = rospy.Time.now()
+            
 
             if are_kp_valid(kp_R_Shoulder, kp_L_Shoulder, kp_R_Elbow, kp_R_Wrist):
 
@@ -251,8 +261,15 @@ class ROSInterface:
                 ################## Calculo q4 ##################
                 right_arm.q4 = calculate_angle_3_points(kp_R_Shoulder, kp_R_Elbow, kp_R_Wrist)
 
+                # Almacenar los KP usados para el cálculo del IK.
+                right_arm.right_shoulder = Point(*kp_R_Shoulder)
+                right_arm.right_elbow    = Point(*kp_R_Elbow)
+                right_arm.right_wrist    = Point(*kp_R_Wrist)
+                right_arm.left_shoulder  = Point(*kp_L_Shoulder)
 
-                # Publish the right arm angles calculated
+                # Publish the right arm angles calculated. Se publican tb los kp
+                right_arm.header.stamp = rospy.Time.now()
+                right_arm.header.frame_id = 'base_link' # para saber sobre que frame están los kp
                 self.right_arm_pub.publish(right_arm)
 
                 ## Publicar joint states
@@ -268,7 +285,7 @@ class ROSInterface:
                                                 np.radians(right_arm.q3),
                                                 np.radians(right_arm.q4),
                                                 right_arm.forearm_length,
-                                                np.radians(0.0)
+                                                np.radians(self.q5_input) # q5 supinación input from joystick
                                                 ])
                 
                 self.joint_state_pub.publish(joint_state)

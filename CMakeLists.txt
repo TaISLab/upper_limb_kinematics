@@ -20,6 +20,7 @@ add_message_files(
   FILES
 
   RightArm.msg  # From IK_arm_calculator.py
+  RightArmState.msg
   KP_URDF.msg   # From DK_listener.py
   KP_vision.msg # DEBUG only
 )
