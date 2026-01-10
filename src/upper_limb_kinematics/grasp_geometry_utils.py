@@ -423,13 +423,15 @@ def obtener_vertices_hexagono(tfBuffer, dedoX, dedoY, frame_base="base_gripper")
         p_Y2_x = p_Y2 + 0.045 * x_Y2
 
         # Aplanar en X local del frame base (usar X de p_X1 para todos)
+        offset_x = -0.00 # agarra por el lado de dentro
+
         x_flat = p_X1[0]
-        p1 = np.array([x_flat, p_X1[1], p_X1[2]])
-        p2 = np.array([x_flat, p_X2[1], p_X2[2]])
-        p3 = np.array([x_flat, p_X2_x[1], p_X2_x[2]])
-        p4 = np.array([x_flat, p_Y2_x[1], p_Y2_x[2]])
-        p5 = np.array([x_flat, p_Y2[1], p_Y2[2]])
-        p6 = np.array([x_flat, p_Y1[1], p_Y1[2]])
+        p1 = np.array([x_flat + offset_x, p_X1[1], p_X1[2]])
+        p2 = np.array([x_flat + offset_x, p_X2[1], p_X2[2]])
+        p3 = np.array([x_flat + offset_x, p_X2_x[1], p_X2_x[2]])
+        p4 = np.array([x_flat + offset_x, p_Y2_x[1], p_Y2_x[2]])
+        p5 = np.array([x_flat + offset_x, p_Y2[1], p_Y2[2]])
+        p6 = np.array([x_flat + offset_x, p_Y1[1], p_Y1[2]])
 
         return p1, p2, p3, p4, p5, p6
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):

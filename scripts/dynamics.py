@@ -3,30 +3,14 @@
 import rospy
 import numpy as np
 import roslib.packages
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, WrenchStamped
 from scipy.spatial.transform import Rotation as R
-from franka_msgs.msg import FrankaState
 from sensor_msgs.msg import JointState
-
-from std_msgs.msg import Bool, Int32, Float64MultiArray, MultiArrayDimension
+from std_msgs.msg import Bool, Float64MultiArray, MultiArrayDimension
 import PyKDL as kdl
 from kdl_parser_py.urdf import treeFromParam
-
-# Import custom message types
-from skeleton_3d.msg import Skeleton3D  # Mensaje con info de los KP
-from upper_limb_kinematics.msg import RightArm, RightArmState # Mensaje a publicar
-
-
-FLAG_GRIPPED=False
-
-# TODO: Subscribirse al grasp state y al F_Ext del franka
-# TODO: Revisar la dirección de la gravedad respecto al modelo URDF
-
-"""
-Para probar el switch entre gripper y skeleton:
-rostopic pub /grasp_state std_msgs/Bool "data: True"
-
-"""
+from tf.transformations import quaternion_matrix
+import tf2_ros
 
 class ChainIdSolver_RNE_Py:
     def __init__(self, chain, gravity=kdl.Vector(0,0,-9.81)):
@@ -35,20 +19,17 @@ class ChainIdSolver_RNE_Py:
         # Inicializa el modelo dinámico de la cadena
         self.dyn = kdl.ChainDynParam(chain, gravity)
 
-
-    def CartToJnt(self, q, forearm_grasp=False, jacobian=None, f_ext=None):
+    def CartToJnt(self, q, jacobian=None, f_ext=None):
         """
         Compute joint torques given joint positions, with the simplification that joint velocities (qd) and accelerations (qdd) are zero.
         Returns the computed tau_out array.
 
         Parameters:
         - q: Joint positions
-        - forearm_grasp: Boolean indicating if forearm is grasped
         - jacobian: Jacobian matrix (optional)
-        - f_ext: External force vector (optional)
+        - f_ext: External force vector humano -> robot (optional)
         """
 
-        rospy.logdebug("CartToJnt called with forearm_grasp=%s", forearm_grasp)
         rospy.logdebug("Joint positions (q): %s", [q[i] for i in range(self.n)])
 
         # Calcular G(q) correctamente como variable local
@@ -57,7 +38,7 @@ class ChainIdSolver_RNE_Py:
         rospy.logdebug("Gravity torques (G): %s", [G[i] for i in range(self.n)])
 
         tau_out = kdl.JntArray(self.n)
-        if forearm_grasp and f_ext is not None and jacobian is not None:
+        if f_ext is not None and jacobian is not None:
             rospy.logdebug("External force (f_ext): %s", f_ext)
             rospy.logdebug("Jacobian: %s", jacobian)
             # Suponiendo que f_ext es un vector numpy y jacobian es una matriz numpy
@@ -81,11 +62,15 @@ class ROSInterface:
         # Inicializar nodo ROS
         rospy.init_node('dynamic_model_human_arm', anonymous=False)
 
-        # 1) Leer parámetros del Launch
+        # Parámetros del launch
         urdf_param   = rospy.get_param('~urdf_param',   'robot_description')
         initial_link = rospy.get_param('~initial_link')
         final_link   = rospy.get_param('~final_link')
         debug        = rospy.get_param('~debug', False)
+        
+        ###############################
+        #   Cadena cinemática KDL
+        ###############################
 
         # Cargar URDF y construir KDL Tree
         ok, tree = treeFromParam(urdf_param)
@@ -101,31 +86,113 @@ class ROSInterface:
             exit(1)
         rospy.loginfo("Número de articulaciones en la cadena: %d", n_joints)
 
-        # Atributos del modelo dinámico
+        # Solver del modelo dinámico inverso
         self.chain = chain
         self.n_joints = n_joints
-        self.solver = ChainIdSolver_RNE_Py(self.chain, kdl.Vector(0,0,-9.81))
+        self.InvDynSolver = ChainIdSolver_RNE_Py(self.chain, kdl.Vector(0,0,-9.81))
 
         self.q = kdl.JntArray(n_joints)
         self.tau_out = kdl.JntArray(n_joints)
         self.G = kdl.JntArray(n_joints)
-        self.f_ext = None # Placeholder for external force vector
+        self.f_human = None # Fuerza aplicada por el humano al robot (vector 6x1)
 
-        # Jacobian solver
+        # Solver de la jacobiana
         self.jac_solver = kdl.ChainJntToJacSolver(self.chain)
         self.jacobian = np.zeros((6, n_joints))
 
         # Subscribers and Publishers
         rospy.Subscriber('/right_arm/joint_states', JointState, self.q_callback)
-        # rospy.Subscriber('/grasp_state', Bool, self.grasp_state_callback)
-        
-        # TODO: Subscribirse a la fuerza externa cuando esté disponible
-        # rospy.Subscriber('/right_arm/external_force', kdl.Wrench, self.external_force_callback)
-        
+        rospy.Subscriber('/franka_state_controller/F_ext', WrenchStamped, self.force_cb, queue_size=1)
+        rospy.Subscriber('/gripper_4f/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
+    
         self.pub_dynamics = rospy.Publisher('/right_arm/joint_states_with_dynamics', JointState, queue_size=1)
         self.pub_jacobian = rospy.Publisher('/right_arm/jacobian_6x7', Float64MultiArray, queue_size=1)
+        
+        #####################
+        #  ROS TF listener
+        #####################
+        self.tf_buf = tf2_ros.Buffer()
+        self.tf_lst = tf2_ros.TransformListener(self.tf_buf)
+
+        # Otros atributos
+        self.flag_gripped = False  # Estado inicial del gripper
+        self.target_frame = final_link  # Frame del antebrazo del humano
 
         rospy.loginfo("Dynamic model human node initialized successfully.")
+
+    def grasp_state_callback(self, msg):
+        """
+        Callback function to handle incoming grasp state messages.
+        Updates the flag_gripped variable based on the gripper state.
+        Parameters:
+        - msg: Bool message indicating the gripper state (True if grasping, False otherwise)
+        """
+
+        if msg.data == True:
+            if msg.data != self.flag_gripped:
+                rospy.loginfo("Gripper is grasping. Using gripper position for wrist keypoint.")
+            self.flag_gripped = True
+        else:
+            if msg.data != self.flag_gripped:
+                rospy.loginfo("Gripper is not grasping. Using skeleton keypoint for wrist.")
+            self.flag_gripped = False
+
+    def force_cb(self, msg):
+        """
+        Callback function to handle incoming external force messages.
+        Updates the external force vector used in dynamics calculations.
+
+        Parameters:
+        - msg: WrenchStamped message containing the external force data
+
+        La frecuencia de actualización de esta fuerza debe ser alta para que la dinámica sea precisa. 
+        Si es a 1KHz, no es necesario sincronizar con el callback de valores articulares q porque va a 100Hz
+        """
+
+        if self.flag_gripped:
+
+            # Extraer la fuerza externa del mensaje
+            fx = msg.wrench.force.x
+            fy = msg.wrench.force.y
+            fz = msg.wrench.force.z
+            tx = msg.wrench.torque.x
+            ty = msg.wrench.torque.y
+            tz = msg.wrench.torque.z
+
+            f_ext = np.array([fx, fy, fz, tx, ty, tz])
+
+
+            try:
+                tr = self.tf_buf.lookup_transform(
+                    self.target_frame,               # Frame destino A
+                    'fr3_K',                         # Frame de medida K. Origen
+                    rospy.Time(0),                # última TF en el buffer
+                    rospy.Duration(0.02) # timeout
+                )
+            except (tf2_ros.LookupException,
+                    tf2_ros.ConnectivityException,
+                    tf2_ros.ExtrapolationException) as e:
+                rospy.logwarn_throttle(1.0, f"[force_cb] TF fail {e}")
+                return
+
+            t = tr.transform.translation
+            q = tr.transform.rotation
+            R = quaternion_matrix([q.x, q.y, q.z, q.w])[:3, :3]  # ^A R_B
+            p = np.array([t.x, t.y, t.z], dtype=float)           # ^A p_AB
+
+
+            # 3) Transformación del wrench
+            F_B = f_ext[0:3]  # Fuerza en el frame B (efector final)
+            T_B = f_ext[3:6]  # Torque en el frame B (
+
+            F_A = R.dot(F_B)
+            T_A = R.dot(T_B) + np.cross(p, F_A)
+
+            self.f_human = np.hstack((F_A, T_A))
+        
+        else:
+            self.f_human = None
+            rospy.logdebug_throttle(5.0, "Force callback: Not gripped, ignoring external force.")
 
     def q_callback(self, msg):
         """
@@ -169,12 +236,10 @@ class ROSInterface:
 
 
         # Dinámica inversa (pares según q y F_ext)
-        forearm_grasp = False # TODO: Actualizar según el estado real del gripper
-        tau_out = self.solver.CartToJnt(
+        tau_out = self.InvDynSolver.CartToJnt(
             self.q,
-            forearm_grasp=False,
             jacobian=self.jacobian,
-            f_ext=self.f_ext
+            f_ext=self.f_human
         )
         
         rospy.logdebug("Calculated dynamics (tau_out)")

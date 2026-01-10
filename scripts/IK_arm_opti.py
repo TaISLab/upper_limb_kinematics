@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+import message_filters
 import rospy
 import numpy as np
 import roslib.packages
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, PointStamped
 from scipy.spatial.transform import Rotation as R
 from franka_msgs.msg import FrankaState
 from sensor_msgs.msg import JointState
@@ -33,7 +34,7 @@ class ROSInterface:
         """
 
         # Inicializar nodo ROS con nombre único
-        rospy.init_node('IK_arm', anonymous=False)
+        rospy.init_node('IK_arm_opti', anonymous=False)
 
         # Get the directory path for the ROS package 'upper_limb_kinematics'
         try:
@@ -43,13 +44,18 @@ class ROSInterface:
             raise e
 
         # ROS publisher/subs
-        self.right_arm_pub = rospy.Publisher('current_state', RightArmState, queue_size=1) # Definir sin la / barra proporciona flexibilidad para cambiar el namespace del topic en un futuro
-        self.joint_state_pub = rospy.Publisher('joint_states', JointState, queue_size=1) 
+        # self.right_arm_pub = rospy.Publisher('current_state', RightArmState, queue_size=1) # Definir sin la / barra proporciona flexibilidad para cambiar el namespace del topic en un futuro
+        self.joint_state_pub = rospy.Publisher('optitrack/joint_states', JointState, queue_size=1) 
         
-        rospy.Subscriber('/skeleton_3D', Skeleton3D, self.IK_calculator_callback) # Dont forget SELF.
-        rospy.Subscriber('/franka_state_controller/franka_states', FrankaState, self.franka_pose_callback)
-        rospy.Subscriber('/gripper_4f/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
-        rospy.Subscriber('/gripper_4f/q5_buttons', Int32, self.q5_input_callback) # Para recibir el input de q5 desde el joystick
+        # sub synchonizer
+        lshoulder_sub = message_filters.Subscriber('/optitrack/lshoulder', PointStamped)
+        rshoulder_sub = message_filters.Subscriber('/optitrack/rshoulder', PointStamped)
+        elbow_sub = message_filters.Subscriber('/optitrack/elbow', PointStamped)
+        wrist_sub = message_filters.Subscriber('/optitrack/wrist', PointStamped)
+
+        self.sub_optitrack = [lshoulder_sub, rshoulder_sub, elbow_sub, wrist_sub]
+        self.sync = message_filters.TimeSynchronizer(self.sub_optitrack, 10)
+        self.sync.registerCallback(self.IK_calculator_callback)
 
         # FLAGS de estado
         self.last_valid_kp = True  # Estado anterior de los KP
@@ -73,23 +79,7 @@ class ROSInterface:
 
         rospy.loginfo("IK_arm node initialized successfully.")
 
-    def q5_input_callback(self, msg):
-        """
-        Callback function to receive the input for q5 from the joystick.
-        """
-        self.q5_input = msg.data
-        rospy.loginfo(f"Received q5 supination from franka buttons: {self.q5_input} degrees")
 
-    def grasp_state_callback(self, msg):
-
-        if msg.data == True:
-            if msg.data != self.flag_gripped:
-                rospy.loginfo("Gripper is grasping. Using gripper position for wrist keypoint.")
-            self.flag_gripped = True
-        else:
-            if msg.data != self.flag_gripped:
-                rospy.loginfo("Gripper is not grasping. Using skeleton keypoint for wrist.")
-            self.flag_gripped = False
 
     
     def timeout_callback(self, event):
@@ -98,35 +88,15 @@ class ROSInterface:
         """
         if not self.data_received:
             if not self.is_paused:
-                rospy.logwarn("No se están recibiendo datos en /skeleton_3D. Nodo en pausa.")
+                rospy.logwarn("No se están recibiendo datos en /optitrack. Nodo en pausa.")
                 self.is_paused = True
         else:
             if self.is_paused:
-                rospy.loginfo("Datos de /skeleton_3D recibidos nuevamente. Nodo reanudado.")
+                rospy.loginfo("Datos de /optitrack recibidos nuevamente. Nodo reanudado.")
                 self.is_paused = False
             self.data_received = False  # Reset para la siguiente iteración
     
-    def franka_pose_callback(self, msg):
-        """
-        Extrae la posición del efector final del franka. 
-        """
-        # Extraer las matrices de transformación homogénea
-        O_T_EE = np.array(msg.O_T_EE).reshape(4, 4).T
-        EE_T_K = np.array(msg.EE_T_K).reshape(4, 4).T
-
-        # Calcular O_T_K = O_T_EE @ EE_T_K
-        O_T_K = np.dot(O_T_EE, EE_T_K)
-
-        # Extraer la posición de la herramienta (última columna, primeras 3 filas)
-        tool_position = O_T_K[:3, 3]
-
-        # Convertir directamente a array numpy
-        self.position_franka_EE = tool_position
-
-        # rospy.loginfo(tool_position)
-
-    
-    def IK_calculator_callback(self, msg):
+    def IK_calculator_callback(self, lshoulder_msg, rshoulder_msg, elbow_msg, wrist_msg):
         """
         Callback function to calculate the DH angles of the right arm.
         - q1: Elevación frontal
@@ -151,7 +121,7 @@ class ROSInterface:
             self.data_received = True
 
             # Convert the received messages into a list of 3D keypoint arrays. Transform to ros msg to numpy vector
-            keypointsX = np.array([(kp.x, kp.y, kp.z) for kp in msg.keypoints])
+            # keypointsX = np.array([(kp.x, kp.y, kp.z) for kp in msg.keypoints])
             right_arm = RightArmState() # msg a construir
 
             # Guide of Kp
@@ -162,20 +132,13 @@ class ROSInterface:
             # 17 neck. no funciona.
 
             # Asignacion de Kp
-            kp_R_Shoulder = keypointsX[6]
-            kp_R_Elbow = keypointsX[8]
-            kp_R_Wrist = keypointsX[10]
-            kp_L_Shoulder = keypointsX[5]
-
-            if self.flag_gripped:
-                kp_R_Wrist = self.position_franka_EE
-
-            # if FLAG_GRIPPED:
-            #     kp_R_Wrist = self.position_franka_EE
-
+            lshoulder = np.array([lshoulder_msg.point.x, lshoulder_msg.point.y, lshoulder_msg.point.z])
+            rshoulder = np.array([rshoulder_msg.point.x, rshoulder_msg.point.y, rshoulder_msg.point.z])
+            elbow = np.array([elbow_msg.point.x, elbow_msg.point.y, elbow_msg.point.z])
+            wrist = np.array([wrist_msg.point.x, wrist_msg.point.y, wrist_msg.point.z])
             
 
-            if are_kp_valid(kp_R_Shoulder, kp_L_Shoulder, kp_R_Elbow, kp_R_Wrist):
+            if are_kp_valid(rshoulder, lshoulder, elbow, wrist):
 
                 # Si antes eran inválidos, loguea el cambio
                 if not self.last_valid_kp:
@@ -183,9 +146,9 @@ class ROSInterface:
                 self.last_valid_kp = True
 
                 # Verificación de la Z de los hombros
-                shoulder_z_error = np.abs(kp_R_Shoulder[2] - kp_L_Shoulder[2])
-                # rospy.loginfo(f"kp_R_Shoulder_z ={kp_R_Shoulder[2]}")
-                # rospy.loginfo(f"kp_L_Shoulder_z ={kp_L_Shoulder[2]}")
+                shoulder_z_error = np.abs(rshoulder[2] - lshoulder[2])
+                # rospy.loginfo(f"rshoulder_z ={rshoulder[2]}")
+                # rospy.loginfo(f"lshoulder_z ={lshoulder[2]}")
                 # rospy.loginfo(f"Error_z_shoulder ={shoulder_z_error}")
 
                 if shoulder_z_error >= 0.05:
@@ -196,8 +159,8 @@ class ROSInterface:
 
                 
                 ################## Longitudes ##################
-                upperarm_length = np.linalg.norm(kp_R_Elbow - kp_R_Shoulder)
-                forearm_length = np.linalg.norm(kp_R_Wrist - kp_R_Elbow)
+                upperarm_length = np.linalg.norm(elbow - rshoulder)
+                forearm_length = np.linalg.norm(wrist - elbow)
 
                 right_arm.upperarm_length = upperarm_length
                 right_arm.forearm_length = forearm_length
@@ -205,8 +168,8 @@ class ROSInterface:
                 ################## Vectores esenciales ##################
                 # Vector = Final - Inicial
 
-                vect_upperarm = normalize_vector(kp_R_Elbow - kp_R_Shoulder)
-                vect_laterolateral = normalize_vector(kp_R_Shoulder - kp_L_Shoulder)
+                vect_upperarm = normalize_vector(elbow - rshoulder)
+                vect_laterolateral = normalize_vector(rshoulder - lshoulder)
 
                 ################## Calculo q1 ##################
                 # Plano sagital
@@ -218,7 +181,7 @@ class ROSInterface:
                 # Calculo con signo
                 right_arm.q1 = calculate_signed_angle_3d(
                     vect_ref_q1,
-                    normalize_vector(project_Kp_to_plane(kp_R_Elbow, kp_R_Shoulder, vect_laterolateral) - kp_R_Shoulder), # Solo es necesario proyectar el codo, el RShoulder pertenece
+                    normalize_vector(project_Kp_to_plane(elbow, rshoulder, vect_laterolateral) - rshoulder), # Solo es necesario proyectar el codo, el RShoulder pertenece
                     vect_laterolateral
                 )
 
@@ -227,7 +190,7 @@ class ROSInterface:
                     # Metodo: Se establece el vector q2 de referencia y se rota en el eje local de aplicación de q1. Posteriormente se calcula el ángulo entre el vector de referencia rotado y el vector longitudinal
                     # Punto del plano: right_shoulder
                 
-                if (right_arm.q1 != np.nan):
+                if not np.isnan(right_arm.q1):
                     vect_ref_q2 = ([0, 0, -1]) # SIMPLIFICACION: Vector Z negativo
                     vect_ref_q2_rot = rotate_vector_local(vect_ref_q2, vect_laterolateral, right_arm.q1) # CORREGIDO: Se3 rota sobre el eje local
                     vect_ref_q2_rot_norm = normalize_vector(vect_ref_q2_rot)
@@ -247,34 +210,34 @@ class ROSInterface:
                     #   vector normal: vector longitudinal del brazo
                     #   Pto de aplicación: codo
                     
-                    vect_ref_q3 = normalize_vector(kp_L_Shoulder - kp_R_Shoulder) # Vector de referencia.
+                    vect_ref_q3 = normalize_vector(lshoulder - rshoulder) # Vector de referencia.
                     
                     vector_ref_q3_rot1 = rotate_vector_local(vect_ref_q3, vect_laterolateral, right_arm.q1) # No tiene interes porq se rota sobre si mismo
                     vector_ref_q3_rot2 = rotate_vector_local(vector_ref_q3_rot1, normal_vector_q2_sign, right_arm.q2)
 
                     right_arm.q3 = calculate_signed_angle_3d(
                         vector_ref_q3_rot2, # no hace falta proyectar, pertenece siempre
-                        normalize_vector(project_Kp_to_plane(kp_R_Wrist, kp_R_Elbow, vect_upperarm) - kp_R_Elbow),
+                        normalize_vector(project_Kp_to_plane(wrist, elbow, vect_upperarm) - elbow),
                         vect_upperarm
                     )
 
                 ################## Calculo q4 ##################
-                right_arm.q4 = calculate_angle_3_points(kp_R_Shoulder, kp_R_Elbow, kp_R_Wrist)
+                right_arm.q4 = calculate_angle_3_points(rshoulder, elbow, wrist)
 
                 # Almacenar los KP usados para el cálculo del IK.
-                right_arm.right_shoulder = Point(*kp_R_Shoulder)
-                right_arm.right_elbow    = Point(*kp_R_Elbow)
-                right_arm.right_wrist    = Point(*kp_R_Wrist)
-                right_arm.left_shoulder  = Point(*kp_L_Shoulder)
+                right_arm.right_shoulder = Point(*rshoulder)
+                right_arm.right_elbow    = Point(*elbow)
+                right_arm.right_wrist    = Point(*wrist)
+                right_arm.left_shoulder  = Point(*lshoulder)
 
                 # Publish the right arm angles calculated. Se publican tb los kp
-                right_arm.header.stamp = msg.header.stamp # Usar el mismo timestamp que el msg de entrada
+                right_arm.header.stamp = rshoulder_msg.header.stamp # Usar el mismo timestamp que el msg de entrada
                 right_arm.header.frame_id = 'base_link' # para saber sobre que frame están los kp
-                self.right_arm_pub.publish(right_arm)
+                # self.right_arm_pub.publish(right_arm)
 
                 ## Publicar joint states
                 joint_state = JointState()
-                joint_state.header.stamp = msg.header.stamp
+                joint_state.header.stamp = rshoulder_msg.header.stamp
 
                 # Right arm assignment
                 joint_state.name = np.array(['right_arm_q1', 'right_arm_q2', 'upperarm_length', 'right_arm_q3', 'right_arm_q4', 'forearm_length', 'right_arm_q5'])
@@ -285,7 +248,7 @@ class ROSInterface:
                                                 np.radians(right_arm.q3),
                                                 np.radians(right_arm.q4),
                                                 right_arm.forearm_length,
-                                                np.radians(self.q5_input) # q5 supinación input from joystick
+                                                np.radians(0.0) # q5 supinación input from joystick
                                                 ])
                 
                 self.joint_state_pub.publish(joint_state)

@@ -9,8 +9,10 @@ Panels:
         - /q_dot_d1/q3_dot_d1
         - /q_dot_d1/q4_dot_d1
         - /gripper_4f1/gripper_4f URDF1
-      Splitter Ratio: 0.6293333172798157
-    Tree Height: 392
+        - /Marker1
+        - /Marker2
+      Splitter Ratio: 0.6578313112258911
+    Tree Height: 823
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -28,7 +30,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud
+    SyncSource: ""
   - Class: rviz_visual_tools/RvizVisualToolsGui
     Name: RvizVisualToolsGui
 Preferences:
@@ -78,201 +80,151 @@ Visualization Manager:
           Value: false
         RightForeArm:
           Value: true
-        RightForeArm_f1:
-          Value: true
-        RightForeArm_f2:
-          Value: false
-        RightShoulder_f1:
-          Value: false
-        RightShoulder_f2:
-          Value: false
-        RightUpperArm:
-          Value: false
-        RightUpperArm_f1:
+        base_gripper:
           Value: false
         base_link:
           Value: false
-        base_shoulder:
+        dedo1_link0:
+          Value: false
+        dedo1_link02:
+          Value: false
+        dedo1_link1:
+          Value: false
+        dedo1_link2:
+          Value: false
+        dedo2_link0:
+          Value: false
+        dedo2_link02:
+          Value: false
+        dedo2_link1:
+          Value: false
+        dedo2_link2:
+          Value: false
+        dedo3_link0:
+          Value: false
+        dedo3_link02:
+          Value: false
+        dedo3_link1:
           Value: true
-        camera1_aligned_depth_to_color_frame:
-          Value: false
-        camera1_bottom_screw_frame:
-          Value: false
-        camera1_color_frame:
-          Value: false
-        camera1_color_optical_frame:
+        dedo3_link2:
           Value: true
-        camera1_depth_frame:
+        dedo4_link0:
           Value: false
-        camera1_depth_optical_frame:
+        dedo4_link02:
           Value: false
-        camera1_infra1_frame:
-          Value: false
-        camera1_infra1_optical_frame:
-          Value: false
-        camera1_infra2_frame:
-          Value: false
-        camera1_infra2_optical_frame:
-          Value: false
-        camera1_link:
-          Value: false
-        camera2_aligned_depth_to_color_frame:
-          Value: false
-        camera2_bottom_screw_frame:
-          Value: false
-        camera2_color_frame:
-          Value: false
-        camera2_color_optical_frame:
+        dedo4_link1:
           Value: true
-        camera2_depth_frame:
-          Value: false
-        camera2_depth_optical_frame:
-          Value: false
-        camera2_infra1_frame:
-          Value: false
-        camera2_infra1_optical_frame:
-          Value: false
-        camera2_infra2_frame:
-          Value: false
-        camera2_infra2_optical_frame:
-          Value: false
-        camera2_link:
-          Value: false
-        camera3_aligned_depth_to_color_frame:
-          Value: false
-        camera3_bottom_screw_frame:
-          Value: false
-        camera3_color_frame:
-          Value: false
-        camera3_color_optical_frame:
+        dedo4_link2:
           Value: true
-        camera3_depth_frame:
+        fr3_EE:
           Value: false
-        camera3_depth_optical_frame:
-          Value: false
-        camera3_infra1_frame:
-          Value: false
-        camera3_infra1_optical_frame:
-          Value: false
-        camera3_infra2_frame:
-          Value: false
-        camera3_infra2_optical_frame:
-          Value: false
-        camera3_link:
-          Value: false
-        camera4_aligned_depth_to_color_frame:
-          Value: false
-        camera4_bottom_screw_frame:
-          Value: false
-        camera4_color_frame:
-          Value: false
-        camera4_color_optical_frame:
+        fr3_K:
           Value: true
-        camera4_depth_frame:
-          Value: false
-        camera4_depth_optical_frame:
-          Value: false
-        camera4_infra1_frame:
-          Value: false
-        camera4_infra1_optical_frame:
-          Value: false
-        camera4_infra2_frame:
-          Value: false
-        camera4_infra2_optical_frame:
-          Value: false
-        camera4_link:
+        fr3_NE:
           Value: false
         fr3_link0:
           Value: false
+        fr3_link0_sc:
+          Value: false
+        fr3_link1:
+          Value: false
+        fr3_link1_sc:
+          Value: false
+        fr3_link2:
+          Value: false
+        fr3_link2_sc:
+          Value: false
+        fr3_link3:
+          Value: false
+        fr3_link3_sc:
+          Value: false
+        fr3_link4:
+          Value: false
+        fr3_link4_sc:
+          Value: false
+        fr3_link5:
+          Value: false
+        fr3_link5_sc:
+          Value: false
+        fr3_link6:
+          Value: false
+        fr3_link6_sc:
+          Value: false
+        fr3_link7:
+          Value: false
+        fr3_link7_sc:
+          Value: false
+        fr3_link8:
+          Value: false
+        soporte_gripper:
+          Value: true
       Marker Alpha: 1
-      Marker Scale: 1
+      Marker Scale: 0.20000000298023224
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: false
+      Show Names: true
       Tree:
+        RightForeArm:
+          RightFakeHand:
+            RightFakeFingers:
+              {}
         base_link:
-          base_shoulder:
-            RightShoulder_f1:
-              RightShoulder_f2:
-                RightUpperArm_f1:
-                  RightUpperArm:
-                    RightForeArm_f1:
-                      RightForeArm_f2:
-                        RightForeArm:
-                          RightFakeHand:
-                            RightFakeFingers:
-                              {}
-          camera1_bottom_screw_frame:
-            camera1_link:
-              camera1_aligned_depth_to_color_frame:
-                {}
-              camera1_color_frame:
-                {}
-              camera1_depth_frame:
-                camera1_depth_optical_frame:
-                  {}
-              camera1_infra1_frame:
-                camera1_infra1_optical_frame:
-                  {}
-              camera1_infra2_frame:
-                camera1_infra2_optical_frame:
-                  {}
-          camera1_color_optical_frame:
-            {}
-          camera2_bottom_screw_frame:
-            camera2_link:
-              camera2_aligned_depth_to_color_frame:
-                {}
-              camera2_color_frame:
-                {}
-              camera2_depth_frame:
-                camera2_depth_optical_frame:
-                  {}
-              camera2_infra1_frame:
-                camera2_infra1_optical_frame:
-                  {}
-              camera2_infra2_frame:
-                camera2_infra2_optical_frame:
-                  {}
-          camera2_color_optical_frame:
-            {}
-          camera3_bottom_screw_frame:
-            camera3_link:
-              camera3_aligned_depth_to_color_frame:
-                {}
-              camera3_color_frame:
-                {}
-              camera3_depth_frame:
-                camera3_depth_optical_frame:
-                  {}
-              camera3_infra1_frame:
-                camera3_infra1_optical_frame:
-                  {}
-              camera3_infra2_frame:
-                camera3_infra2_optical_frame:
-                  {}
-          camera3_color_optical_frame:
-            {}
-          camera4_bottom_screw_frame:
-            camera4_link:
-              camera4_aligned_depth_to_color_frame:
-                {}
-              camera4_color_frame:
-                {}
-              camera4_depth_frame:
-                camera4_depth_optical_frame:
-                  {}
-              camera4_infra1_frame:
-                camera4_infra1_optical_frame:
-                  {}
-              camera4_infra2_frame:
-                camera4_infra2_optical_frame:
-                  {}
-          camera4_color_optical_frame:
-            {}
           fr3_link0:
-            {}
+            fr3_link0_sc:
+              {}
+            fr3_link1:
+              fr3_link1_sc:
+                {}
+              fr3_link2:
+                fr3_link2_sc:
+                  {}
+                fr3_link3:
+                  fr3_link3_sc:
+                    {}
+                  fr3_link4:
+                    fr3_link4_sc:
+                      {}
+                    fr3_link5:
+                      fr3_link5_sc:
+                        {}
+                      fr3_link6:
+                        fr3_link6_sc:
+                          {}
+                        fr3_link7:
+                          fr3_link7_sc:
+                            {}
+                          fr3_link8:
+                            fr3_NE:
+                              fr3_EE:
+                                fr3_K:
+                                  {}
+                            soporte_gripper:
+                              base_gripper:
+                                dedo1_link0:
+                                  dedo1_link02:
+                                    {}
+                                dedo1_link1:
+                                  dedo1_link2:
+                                    {}
+                                dedo2_link0:
+                                  dedo2_link02:
+                                    {}
+                                dedo2_link1:
+                                  dedo2_link2:
+                                    {}
+                                dedo3_link0:
+                                  dedo3_link02:
+                                    {}
+                                dedo3_link1:
+                                  dedo3_link2:
+                                    {}
+                                dedo4_link0:
+                                  dedo4_link02:
+                                    {}
+                                dedo4_link1:
+                                  dedo4_link2:
+                                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -298,7 +250,7 @@ Visualization Manager:
           Marker Topic: /skeleton_3D/connectors
           Name: Marker
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 1
@@ -362,7 +314,7 @@ Visualization Manager:
           Marker Topic: /skeleton_3D/connectors
           Name: Marker
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -379,57 +331,13 @@ Visualization Manager:
             Expand Link Details: false
             Expand Tree: false
             Link Tree Style: Links in Alphabetic Order
-            RightFakeFingers:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-              Value: true
-            RightFakeHand:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-              Value: true
-            RightForeArm:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-              Value: true
-            RightForeArm_f1:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-            RightForeArm_f2:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-            RightShoulder_f1:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-            RightShoulder_f2:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-            RightUpperArm:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-              Value: true
-            RightUpperArm_f1:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
-            base_shoulder:
-              Alpha: 1
-              Show Axes: false
-              Show Trail: false
           Name: Right Arm URDF
           Robot Description: /right_arm_description
           TF Prefix: ""
           Update Interval: 0
           Value: true
           Visual Enabled: true
-      Enabled: true
+      Enabled: false
       Name: human_description
     - Class: rviz/Group
       Displays:
@@ -564,7 +472,7 @@ Visualization Manager:
       Name: q_dot_d
     - Class: rviz/Group
       Displays:
-        - Alpha: 1
+        - Alpha: 0.5
           Class: rviz/RobotModel
           Collision Enabled: false
           Enabled: true
@@ -574,6 +482,96 @@ Visualization Manager:
             Expand Link Details: false
             Expand Tree: false
             Link Tree Style: Links in Alphabetic Order
+            base_gripper:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo1_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo2_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo3_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link0:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link02:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link1:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            dedo4_link2:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            soporte_gripper:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
           Name: gripper_4f URDF
           Robot Description: /gripper_4f/robot_description
           TF Prefix: ""
@@ -650,6 +648,23 @@ Visualization Manager:
       Unreliable: false
       Value: true
       Width: 0.009999999776482582
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /ellipse_vertices_marker
+      Name: Marker
+      Namespaces:
+        ellipse_vertices: true
+        finger_vectors: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /ellipse_overlay_marker
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -678,7 +693,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.018867254257202
+      Distance: 0.3605097532272339
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -686,25 +701,25 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.6350901126861572
-        Y: 0.06585273891687393
-        Z: 0.9759657382965088
+        X: 0.23867957293987274
+        Y: -0.007335962727665901
+        Z: 0.5250853896141052
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3747965097427368
+      Pitch: 0.5147973299026489
       Target Frame: <Fixed Frame>
-      Yaw: 0.9512863159179688
+      Yaw: 3.3694045543670654
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 582
+  Height: 1013
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000017900000213fc0200000009fb000000100044006900730070006c006100790073010000001600000213000000c900fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000024005200760069007a00560069007300750061006c0054006f006f006c00730047007500690000000336000000410000004100ffffff0000000100000156000003a5fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000016000003a5000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000021c00000172fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000040a000000c9fc0100000002fb0000000800540069006d006500000000000000040a0000041800fffffffb0000000800540069006d006501000000000000045000000000000000000000031a0000021300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730000000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001a1000003c2fc0200000009fb000000100044006900730070006c0061007900730100000016000003c2000000c900fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000024005200760069007a00560069007300750061006c0054006f006f006c00730047007500690000000336000000410000004100ffffff0000000100000156000003a5fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000016000003a5000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000021c00000172fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000040a000000c9fc0100000002fb0000000800540069006d006500000000000000040a0000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000004e9000003c200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730000000000ffffffff0000000000000000
   RvizVisualToolsGui:
     collapsed: false
   Selection:
@@ -715,6 +730,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1177
-  X: 1971
-  Y: 143
+  Width: 1680
+  X: 0
+  Y: 0

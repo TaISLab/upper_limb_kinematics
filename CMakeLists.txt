@@ -23,6 +23,7 @@ add_message_files(
   RightArmState.msg
   KP_URDF.msg   # From DK_listener.py
   KP_vision.msg # DEBUG only
+  AngleStamped.msg # Float32 + header
 )
 
 ## Generate messages and services with the listed dependencies
