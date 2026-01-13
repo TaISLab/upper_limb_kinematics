@@ -437,3 +437,69 @@ def obtener_vertices_hexagono(tfBuffer, dedoX, dedoY, frame_base="base_gripper")
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         rospy.logerr("Error al obtener las transformaciones.")
         return None, None, None, None, None, None
+
+# def intersection_sphere_line(sphere_center, sphere_radius, line_point, line_dir):
+#         """
+#         Calcula el/los punto(s) de intersección entre una esfera y una línea.
+#         Args:
+#             sphere_center: np.array shape (3,) - centro de la esfera
+#             sphere_radius: float - radio de la esfera
+#             line_point: np.array shape (3,) - un punto sobre la línea
+#             line_dir: np.array shape (3,) - vector dirección de la línea (no necesariamente normalizado)
+#         Returns:
+#             Una lista con 0, 1 o 2 puntos de intersección (np.array shape (3,))
+#         """
+
+#         # Normalizar dirección
+#         d = line_dir / np.linalg.norm(line_dir)
+#         o = line_point
+#         c = sphere_center
+#         r = sphere_radius
+
+#         # Vector del centro de la esfera al punto de la línea
+#         oc = o - c
+
+#         # Resolver ecuación cuadrática: ||o + t*d - c||^2 = r^2
+#         # => (d·d)t^2 + 2(d·oc)t + (oc·oc - r^2) = 0
+#         a = np.dot(d, d)
+#         b = 2 * np.dot(d, oc)
+#         c_ = np.dot(oc, oc) - r**2
+
+#         discriminant = b**2 - 4*a*c_
+#         if discriminant < 0:
+#             return []  # No intersection
+
+#         sqrt_disc = np.sqrt(discriminant)
+#         t1 = (-b + sqrt_disc) / (2*a)
+#         t2 = (-b - sqrt_disc) / (2*a)
+
+#         p1 = o + t1 * d
+#         p2 = o + t2 * d
+
+#         if np.isclose(discriminant, 0):
+#             return [p1]  # Tangent: one intersection
+#         else:
+#             return [p1, p2]  # Two intersections
+
+def intersection_sphere_line(sphere_center, sphere_radius, line_point, line_dir):
+    d = line_dir / np.linalg.norm(line_dir)
+    o = line_point
+    c = sphere_center
+    r = sphere_radius
+    oc = o - c
+    
+    a = 1.0 # np.dot(d, d) es 1 si está normalizado
+    b = 2 * np.dot(d, oc)
+    c_val = np.dot(oc, oc) - r**2
+    discriminant = b**2 - 4*a*c_val
+
+    # CASO: No cortan -> Devolver el punto más cercano (Proyección)
+    if discriminant < 0:
+        t_closest = -b / (2*a)
+        return [o + t_closest * d]
+
+    # CASO: Cortan -> Devolver los dos puntos
+    sqrt_disc = np.sqrt(discriminant)
+    t1 = (-b + sqrt_disc) / (2*a)
+    t2 = (-b - sqrt_disc) / (2*a)
+    return [o + t1 * d, o + t2 * d]

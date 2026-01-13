@@ -11,13 +11,14 @@ import tf  # <--- Añadir esta línea para importar tf
 import tf2_ros
 import tf2_geometry_msgs
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import Point, PointStamped, PoseStamped
 
 import math
 from typing import Sequence, Tuple, List
 from shapely.geometry import Polygon
 from upper_limb_kinematics.msg import AngleStamped
 from gripper_4f.msg import encoders_data
+from skeleton_3d.msg import Skeleton3D  # Mensaje con info de los KP
 
 # Funciones auxiliares importadas
 from upper_limb_kinematics.grasp_geometry_utils import (
@@ -34,6 +35,7 @@ from upper_limb_kinematics.grasp_geometry_utils import (
     obtener_vertices_cuatro_lados,
     obtener_vertices_pentagono,
     obtener_vertices_hexagono,
+    intersection_sphere_line,
 )
 from upper_limb_kinematics.grasp_polygon_utils import (
     john_ellipse_in_polygon,
@@ -64,6 +66,7 @@ SUSTITUIR_CENTROIDE_POR_ELIPSE = False  # True -> usar centro de elipse; False -
 GET_FROM_TF = False  # True -> vértices desde TF; False -> gripper_4f
 FOREARM_CALCULATION = True
 INFER_ELLIPSE = True
+ELBOW_AS_INTERSECTION_SPHERE_LINE = True
 
 # --- FRAMES DE REFERENCIA ---
 FRAME_ID = "base_gripper"
@@ -111,6 +114,10 @@ class EllipseMethodNode:
         self.angle_pub_12 = rospy.Publisher('/tactile/ellipse_12_angle_deg', AngleStamped, queue_size=1)
         self.angle_pub_34 = rospy.Publisher('/tactile/ellipse_34_angle_deg', AngleStamped, queue_size=1)
 
+        self.debug_sphere_pub = rospy.Publisher('/debug/shoulder_sphere', Marker, queue_size=1)
+        self.debug_line_pub = rospy.Publisher('/debug/intersection_line', Marker, queue_size=1)
+        self.forearm_line_pub = rospy.Publisher('/tactile/forearm_line_constraint', PoseStamped, queue_size=1)
+
         # Centroides hexagono garra
         self.centroide12_pub = rospy.Publisher('/tactile/centroide_12', PointStamped, queue_size=20)
         self.centroide_trapecio_12_pub = rospy.Publisher('/tactile/centroide_trapecio_12', PointStamped, queue_size=20)
@@ -119,11 +126,13 @@ class EllipseMethodNode:
         self.new_elbow_pub = rospy.Publisher('/tactile/elbow', PointStamped, queue_size=20)
         self.new_wrist_pub = rospy.Publisher('/tactile/wrist', PointStamped, queue_size=20)
         self.centro_normal_to_q2_pub = rospy.Publisher('/tactile/centro_normal_q2', PointStamped, queue_size=20)
-
+        self.elbow_point_pub = rospy.Publisher('/tactile/elbow_point_intersection', PointStamped, queue_size=20)
         # subscripción a gripper_4f
         rospy.Subscriber("/gripper_4f/encoders_data", encoders_data, self.gripper_callback)
+        rospy.Subscriber("/skeleton_3D", Skeleton3D, self.skeleton_callback)
         
-
+        # rospy params
+        self.l1 = rospy.get_param('/exp_optitrack_25/l1', 0.3)  # Longitud del brazo
         self.l2 = rospy.get_param('/exp_optitrack_25/l2', 0.3)  # Longitud del antebrazo
         # self.grasp_offset = rospy.get_param('/exp_optitrack_25/grasp_offset', 0.1)  # Offset del punto de agarre
         self.grasp_offset = GRASP_OFFSET
@@ -148,6 +157,26 @@ class EllipseMethodNode:
         self.dedo4 = [0.0, 0.0, 0.0]
 
         self.stamp_gripper = None
+        self.stamp_skeleton = None
+        self.rshoulder = None
+
+        # --- Variables para el filtro del codo ---
+        self.prev_elbow = None  # Memoria del filtro
+        self.elbow_alpha = 0.3  # Factor de suavizado (0.0 a 1.0)
+                                # 1.0 = Sin filtro (puro ruido)
+                                # 0.1 = Muy suave (mucho lag)
+                                # 0.2 - 0.3 = Buen balance para tracking humano
+
+    def skeleton_callback(self, msg):
+        # rospy.loginfo("Recibido Skeleton3D.")
+        self.stamp_skeleton = msg.header.stamp
+
+        # Extraer puntos clave relevantes: hombro derecho
+        rshoulder = msg.keypoints[6]
+        self.rshoulder = np.array([rshoulder.x, rshoulder.y, rshoulder.z])
+
+        
+        
 
     def gripper_callback(self, msg):
         
@@ -337,7 +366,7 @@ class EllipseMethodNode:
         
         # Extraemos los ejes de la elipse
         a, b, v_major, v_minor, _ = ellipse_axes_from_G(G)
-        rospy.loginfo(f"{ns_prefix} Elipse calculada: a={a*100:.2f} cm, b={b*100:.2f} cm")
+        # rospy.loginfo(f"{ns_prefix} Elipse calculada: a={a*100:.2f} cm, b={b*100:.2f} cm")
 
         # Calculamos el ángulo del eje mayor
         angle_deg = degrees(atan2(v_major[1], v_major[0]))
@@ -377,7 +406,7 @@ class EllipseMethodNode:
         
         """
         z_offset = +0.012 # CORRECCION ERROR EN EL MODELADO DEL AGARRE ENTRE ROBOT Y GRIPPER
-        
+
         TF_base_gripper_to_base_dedo12_x = -0.04
         TF_base_gripper_to_base_dedo12_y = 0.0
         TF_base_gripper_to_base_dedo12_z = 0.058
@@ -638,8 +667,6 @@ class EllipseMethodNode:
         publish_ring("forearm_cap_12_ext", 1, pts_12_ext)
         publish_ring("forearm_cap_34_ext", 2, pts_34_ext)
 
-
-
     def normal_point_to_q2(self, dedoX, dedoY, frame_base="base_gripper"):
         """
         Calcula el punto de corte entre las normales desplazadas de las falanges 2 de dedo1 y dedo2.
@@ -685,7 +712,7 @@ class EllipseMethodNode:
             punto_corte = intersection_of_lines(p_D1_x, y_D1, p_D2_x, y_D2)
 
             if punto_corte is not None:
-                rospy.loginfo(f"Punto de corte entre normales: {punto_corte}")
+                # rospy.loginfo(f"Punto de corte entre normales: {punto_corte}")
                 # Opcional: publicar el punto en RViz
                 self.publish_pointstamped(self.grasping_point_pub, punto_corte, frame_id=frame_base)
 
@@ -761,8 +788,8 @@ class EllipseMethodNode:
             cent_12 = centroide_poligono(verts_12)
             cent_34 = centroide_poligono(verts_34)
 
-            rospy.loginfo(f"Centroides geométricos 1-2: {cent_12}")
-            rospy.loginfo(f"Centroides geométricos 3-4: {cent_34}")
+            # rospy.loginfo(f"Centroides geométricos 1-2: {cent_12}")
+            # rospy.loginfo(f"Centroides geométricos 3-4: {cent_34}")
 
             info_12_dict = None
             info_34_dict = None
@@ -783,10 +810,10 @@ class EllipseMethodNode:
             # 5. Publicar los puntos definitivos (sean geométricos o de elipse)
             if cent_12 is not None: 
                 self.publish_pointstamped(self.centroide12_pub, cent_12, frame_id=self.frame_id)
-                rospy.loginfo(f"Centroide 1-2: {cent_12}")
+                # rospy.loginfo(f"Centroide 1-2: {cent_12}")
             if cent_34 is not None: 
                 self.publish_pointstamped(self.centroide34_pub, cent_34, frame_id=self.frame_id)
-                rospy.loginfo(f"Centroide 3-4: {cent_34}")
+                # rospy.loginfo(f"Centroide 3-4: {cent_34}")
 
             # 6. Calcular Antebrazo (Usará los nuevos centros de elipse si existen)
             if FOREARM_CALCULATION:
@@ -797,6 +824,136 @@ class EllipseMethodNode:
                     d1 = 0.10  # extensión más allá de elipse34 (metros)
                     d2 = 0.20  # extensión más allá de elipse12 (metros)
                     self.draw_forearm_volume(info_12_dict, info_34_dict, d1, d2)
+
+            if ELBOW_AS_INTERSECTION_SPHERE_LINE and cent_12 is not None and cent_34 is not None:
+                if self.rshoulder is not None:
+                    # Convertir cent_12 y cent_34 a PointStamped
+                    ps_12 = PointStamped()
+                    ps_12.header.frame_id = self.frame_id
+                    ps_12.header.stamp = rospy.Time.now()
+                    ps_12.point.x = float(cent_12[0])
+                    ps_12.point.y = float(cent_12[1])
+                    ps_12.point.z = float(cent_12[2])
+
+                    ps_34 = PointStamped()
+                    ps_34.header.frame_id = self.frame_id
+                    ps_34.header.stamp = rospy.Time.now()
+                    ps_34.point.x = float(cent_34[0])
+                    ps_34.point.y = float(cent_34[1])
+                    ps_34.point.z = float(cent_34[2])
+
+                    try:
+                        cent_12_bl = self.tfBuffer.transform(ps_12, 'base_link', rospy.Duration(1.0))
+                        cent_34_bl = self.tfBuffer.transform(ps_34, 'base_link', rospy.Duration(1.0))
+                    except (tf2_ros.LookupException, tf2_ros.ExtrapolationException, tf2_ros.ConnectivityException) as e:
+                        rospy.logwarn(f"TF transform failed: {e}")
+                        continue # Usar continue en lugar de return para no matar el nodo
+
+                    # 1. Definir Vectores
+                    p_wrist = np.array([cent_12_bl.point.x, cent_12_bl.point.y, cent_12_bl.point.z])
+                    p_fingers = np.array([cent_34_bl.point.x, cent_34_bl.point.y, cent_34_bl.point.z])
+                    v_fore_gripper = p_fingers - p_wrist # Dirección de la línea
+
+                    # --- PUBLICAR RESTRICCIÓN PARA EL SKELETON TRACKER ---
+                    if v_fore_gripper is not None:
+                        # 1. Normalizar vector
+                        v_norm = v_fore_gripper / (np.linalg.norm(v_fore_gripper) + 1e-9)
+                        
+                        # 2. Calcular Cuaternio: Alinear eje X ([1,0,0]) con v_norm
+                        # Eje de rotación = X_axis cross v_norm
+                        # Ángulo = acos(X_axis dot v_norm)
+                        x_axis = np.array([1.0, 0.0, 0.0])
+                        rotation_axis = np.cross(x_axis, v_norm)
+                        
+                        # Manejo de casos colineales (si v_norm es paralelo a X)
+                        if np.linalg.norm(rotation_axis) < 1e-6:
+                            # Si son paralelos, cuaternio identidad (o rotación 180 si opuestos)
+                            q = [0.0, 0.0, 0.0, 1.0] 
+                        else:
+                            rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+                            angle = math.acos(np.dot(x_axis, v_norm))
+                            q = tf.transformations.quaternion_about_axis(angle, rotation_axis)
+
+                        # 3. Crear Mensaje
+                        pose_msg = PoseStamped()
+                        pose_msg.header.frame_id = "base_link" # O el frame donde calculaste p_wrist
+                        pose_msg.header.stamp = rospy.Time.now()
+                        
+                        # Posición = Muñeca
+                        pose_msg.pose.position.x = p_wrist[0]
+                        pose_msg.pose.position.y = p_wrist[1]
+                        pose_msg.pose.position.z = p_wrist[2]
+                        
+                        # Orientación = Vector Director codificado
+                        pose_msg.pose.orientation.x = q[0]
+                        pose_msg.pose.orientation.y = q[1]
+                        pose_msg.pose.orientation.z = q[2]
+                        pose_msg.pose.orientation.w = q[3]
+                        
+                        self.forearm_line_pub.publish(pose_msg)
+
+                    # 2. VISUALIZAR (Llamada a la nueva función)
+                    self.publish_debug_geometry(self.rshoulder, p_wrist, v_fore_gripper)
+
+                    # ... dentro del bucle run, después de calcular v_fore_gripper ...
+                    
+                    # CHIVATO 1: Ver si llegamos aquí
+                    rospy.loginfo("Calculando intersección...")
+
+                    candidates = intersection_sphere_line(self.rshoulder, self.l1, p_wrist, v_fore_gripper)
+                    
+                    # CHIVATO 2: Ver cuántos candidatos devuelve
+                    rospy.loginfo(f"Candidatos encontrados: {len(candidates)}")
+
+                    best_elbow = None
+                    
+                    if len(candidates) == 1:
+                        best_elbow = candidates[0]
+                    elif len(candidates) == 2:
+                        # ... tu lógica de distancias ...
+                        p1 = candidates[0]
+                        p2 = candidates[1]
+                        dist1 = np.linalg.norm(p1 - p_wrist)
+                        dist2 = np.linalg.norm(p2 - p_wrist)
+                        if dist1 < dist2: best_elbow = p1
+                        else: best_elbow = p2
+                    
+                    # CHIVATO 3: Ver si tenemos ganador
+                    # 4. FILTRADO Y PUBLICACIÓN
+                    if best_elbow is not None:
+                        # Asegurar que sea numpy array
+                        current_elbow_np = np.array(best_elbow)
+
+                        # --- PASO DE SEGURIDAD 1: ¿El nuevo dato es válido? ---
+                        if np.isnan(current_elbow_np).any() or np.isinf(current_elbow_np).any():
+                            rospy.logwarn("Cálculo matemático devolvió NaN o Inf. Saltando frame.")
+                            continue # Saltamos esta iteración para no romper el filtro
+
+                        # --- PASO DE SEGURIDAD 2: ¿La memoria está corrupta? ---
+                        if self.prev_elbow is not None:
+                            if np.isnan(self.prev_elbow).any():
+                                rospy.logwarn("Filtro corrupto (NaN detectado en memoria). Reseteando.")
+                                self.prev_elbow = None # Forzamos reinicio
+
+                        # --- APLICAR FILTRO ---
+                        if self.prev_elbow is None:
+                            # Primera iteración o tras reset
+                            smoothed_elbow = current_elbow_np
+                        else:
+                            # Fórmula EMA
+                            smoothed_elbow = (self.elbow_alpha * current_elbow_np) + \
+                                            ((1.0 - self.elbow_alpha) * self.prev_elbow)
+                        
+                        # Actualizar memoria
+                        self.prev_elbow = smoothed_elbow
+
+                        # CHIVATO FINAL (Para confirmar que ahora salen números)
+                        # rospy.loginfo(f"Elbow suavizado: {smoothed_elbow}")
+
+                        # Publicar el punto SUAVIZADO
+                        self.publish_pointstamped(self.elbow_point_pub, smoothed_elbow, frame_id='base_link')
+            else:
+                rospy.logwarn_throttle(5, "Esperando posición del hombro...")
 
             self.rate.sleep()
 
@@ -883,6 +1040,65 @@ class EllipseMethodNode:
             except Exception as e:
                 rospy.logerr(f"Error procesando elipse {ns_prefix}: {e}")
                 return None, None
+
+    def publish_debug_geometry(self, shoulder, wrist, line_dir):
+        """
+        Publica en RViz la esfera del hombro y la línea infinita del antebrazo para depuración.
+        Args:
+            shoulder (np.array): [x, y, z] posición del hombro (centro esfera).
+            wrist (np.array): [x, y, z] posición de la muñeca (punto en la línea).
+            line_dir (np.array): Vector director de la línea.
+        """
+        if shoulder is None or wrist is None:
+            return
+
+        # 1. VISUALIZAR ESFERA (Radio L1)
+        marker_sphere = Marker()
+        marker_sphere.header.frame_id = "base_link"
+        marker_sphere.header.stamp = rospy.Time.now()
+        marker_sphere.ns = "debug_geometry_sphere"
+        marker_sphere.id = 0
+        marker_sphere.type = Marker.SPHERE
+        marker_sphere.action = Marker.ADD
+        
+        marker_sphere.pose.position.x = shoulder[0]
+        marker_sphere.pose.position.y = shoulder[1]
+        marker_sphere.pose.position.z = shoulder[2]
+        marker_sphere.pose.orientation.w = 1.0
+        
+        # Scale en esfera es diámetro
+        diameter = self.l1 * 2.0
+        marker_sphere.scale.x = diameter
+        marker_sphere.scale.y = diameter
+        marker_sphere.scale.z = diameter
+        
+        marker_sphere.color.r = 1.0; marker_sphere.color.g = 1.0; marker_sphere.color.b = 0.0; marker_sphere.color.a = 0.3
+        
+        self.debug_sphere_pub.publish(marker_sphere)
+
+        # 2. VISUALIZAR LÍNEA INFINITA
+        marker_line = Marker()
+        marker_line.header.frame_id = "base_link"
+        marker_line.header.stamp = rospy.Time.now()
+        marker_line.ns = "debug_geometry_line"
+        marker_line.id = 1
+        marker_line.type = Marker.LINE_STRIP
+        marker_line.action = Marker.ADD
+        marker_line.scale.x = 0.005 # Grosor
+        marker_line.color.r = 1.0; marker_line.color.g = 0.0; marker_line.color.b = 1.0; marker_line.color.a = 1.0
+
+        # Crear segmento largo para simular infinito visualmente
+        v_norm = line_dir / (np.linalg.norm(line_dir) + 1e-9)
+        dist_visual = 1.0 
+        p_start = wrist - (v_norm * dist_visual)
+        p_end   = wrist + (v_norm * dist_visual)
+
+        p1 = Point(x=p_start[0], y=p_start[1], z=p_start[2])
+        p2 = Point(x=p_end[0],   y=p_end[1],   z=p_end[2])
+        
+        marker_line.points = [p1, p2]
+        
+        self.debug_line_pub.publish(marker_line)
 
 if __name__ == '__main__':
     try:
