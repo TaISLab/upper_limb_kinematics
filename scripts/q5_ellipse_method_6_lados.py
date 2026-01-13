@@ -38,27 +38,38 @@ from upper_limb_kinematics.grasp_geometry_utils import (
 from upper_limb_kinematics.grasp_polygon_utils import (
     john_ellipse_in_polygon,
     john_ellipse_in_polygon_ORIGINAL,
-    john_ellipse_in_polygon_biomimetic
+    john_ellipse_in_polygon_constrained,
+    john_ellipse_in_polygon_ratio_constrained
 )
 from upper_limb_kinematics.grasp_visualization_utils import (
     draw_overlay,
 )
 
+#-------------------- PARAMETROS ------------------------
 
-# --- CONFIGURACIÓN DE FORMAS ---
+# --- GEOMETRIA DE CADA DEDO ---
 # Opciones disponibles: "CUATRO_LADOS", "PENTAGONO", "HEXAGONO"
-SHAPE_DEDO12 = "HEXAGONO"   # Configuración para el par Dedo 1 y 2
-SHAPE_DEDO34 = "HEXAGONO"    # Configuración para el par Dedo 3 y 4
+SHAPE_DEDO12 = "CUATRO_LADOS"   # Configuración para el par Dedo 1 y 2 (más cerca del codo)
+SHAPE_DEDO34 = "HEXAGONO"       # Configuración para el par Dedo 3 y 4 (más cerca de la muneca)
 
+# gripper_4f
+corregir_medicion_flag = True # Los encoders magnéticos de la garra tienen una leve no linealidad que se corrige con dos puntos de calibración
+ESPESOR_ADELGAZAMIENTO = 0.0075 # Metros
+
+# GRASP
+GRASP_OFFSET = 0.1 # HARDCODED [metros]
+
+# --- OPCIONES DE CÁLCULO ---
+SUSTITUIR_CENTROIDE_POR_ELIPSE = False  # True -> usar centro de elipse; False -> usar centroide geométrico
 GET_FROM_TF = False  # True -> vértices desde TF; False -> gripper_4f
 FOREARM_CALCULATION = True
 INFER_ELLIPSE = True
-ESPESOR_ADELGAZAMIENTO = 0.0075 # Metros
-PUBLISH_PS_IN_BASE_LINK = True
-corregir_medicion_flag = True
 
-# FRAME_ID = "base_link" # para exp
-FRAME_ID = "base_gripper" # para pruebas locales
+# --- FRAMES DE REFERENCIA ---
+FRAME_ID = "base_gripper"
+PUBLISH_PS_IN_BASE_LINK = True # Publicar PointStamped en base_link (transformados) o en FRAME_ID (base_gripper, original)
+
+# --------------------------------------------------------
 
 def corregir_medicion(medicion_actual, p1, p2):
     """
@@ -92,7 +103,7 @@ class EllipseMethodNode:
     def __init__(self):
         rospy.init_node('ellipse_method_node')
         rospy.loginfo("Ellipse Method Node started.")
-        self.rate = rospy.Rate(10)  # 10 Hz
+        self.rate = rospy.Rate(100)  # 10 Hz
 
         # Publisher para los puntos en RViz
         self.marker_pub = rospy.Publisher('/ellipse_vertices_marker', Marker, queue_size=20)
@@ -114,7 +125,8 @@ class EllipseMethodNode:
         
 
         self.l2 = rospy.get_param('/exp_optitrack_25/l2', 0.3)  # Longitud del antebrazo
-        self.grasp_offset = rospy.get_param('/exp_optitrack_25/grasp_offset', 0.1)  # Offset del punto de agarre
+        # self.grasp_offset = rospy.get_param('/exp_optitrack_25/grasp_offset', 0.1)  # Offset del punto de agarre
+        self.grasp_offset = GRASP_OFFSET
 
         rospy.loginfo(f"L2 (get from ros params): {self.l2} m")
         rospy.loginfo(f"Grasp offset (get from ros params): {self.grasp_offset} m")
@@ -125,8 +137,9 @@ class EllipseMethodNode:
         tf_listener = tf2_ros.TransformListener(self.tfBuffer)
 
         # Variables para filtro de suavizado (Exponential Moving Average)
-        self.alpha = 0.2  # Factor de suavizado (0.0 = infinito, 1.0 = sin filtro)
-        self.prev_center = None
+        self.alpha = 0.6  # Factor de suavizado (0.0 = infinito, 1.0 = sin filtro)
+        self.prev_center_12 = None  # Memoria exclusiva para dedos 1-2
+        self.prev_center_34 = None  # Memoria exclusiva para dedos 3-4
         self.prev_G = None
 
         self.dedo1 = [0.0, 0.0, 0.0]
@@ -134,8 +147,11 @@ class EllipseMethodNode:
         self.dedo3 = [0.0, 0.0, 0.0]
         self.dedo4 = [0.0, 0.0, 0.0]
 
-    def gripper_callback(self, msg):
+        self.stamp_gripper = None
 
+    def gripper_callback(self, msg):
+        
+        self.stamp_gripper = msg.header.stamp
         # El sensor tiene una leve no linealidad que se corrige con dos puntos de calibración
         if corregir_medicion_flag == True:
             # rospy.loginfo("Corregir mediciones de los dedos usando calibración.")
@@ -154,7 +170,6 @@ class EllipseMethodNode:
             self.dedo3 = msg.dedo3
             self.dedo4 = msg.dedo4
     
-
     def publish_vectors_marker(self, points, vectors, frame_id="base_gripper", ns="vectors", color=(0.2, 0.2, 1.0)):
         """
         Publica los vectores como Marker tipo ARROW en RViz.
@@ -250,26 +265,28 @@ class EllipseMethodNode:
             point: array-like (x, y, z)
             frame_id: frame de referencia
         """
-        from geometry_msgs.msg import PointStamped
+        
         target_frame = 'base_link'  # Frame al que se quiere transformar
 
         msg = PointStamped()
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = frame_id
-        msg.point.x = float(point[0])
-        msg.point.y = float(point[1])
-        msg.point.z = float(point[2])
-        pub.publish(msg)
+        
+        if self.stamp_gripper is not None:
+            msg.header.stamp = self.stamp_gripper  ### INTENTO DE SINCRONIZACIÓN ###
 
-        # Transformar si el frame de destino es diferente
-        if frame_id != target_frame and PUBLISH_PS_IN_BASE_LINK:
-            try:
-                msg = self.tfBuffer.transform(msg, target_frame, rospy.Duration(1.0))
-            except (tf2_ros.LookupException, tf2_ros.ExtrapolationException, tf2_ros.ConnectivityException) as e:
-                rospy.logwarn(f"TF transform failed: {e}")
-                return
+            msg.header.frame_id = frame_id
+            msg.point.x = float(point[0])
+            msg.point.y = float(point[1])
+            msg.point.z = float(point[2])
 
-        pub.publish(msg)
+            # Transformar si el frame de destino es diferente
+            if frame_id != target_frame and PUBLISH_PS_IN_BASE_LINK:
+                try:
+                    msg = self.tfBuffer.transform(msg, target_frame, rospy.Duration(1.0))
+                except (tf2_ros.LookupException, tf2_ros.ExtrapolationException, tf2_ros.ConnectivityException) as e:
+                    rospy.logwarn(f"TF transform failed: {e}")
+                    return
+
+            pub.publish(msg)
 
     def calculate_ellipse_from_vertices(self, vertices, ns_prefix=""):
         """
@@ -288,42 +305,25 @@ class EllipseMethodNode:
         # Quitar la coordenada X:
         vertices = [(float(v[1]), float(v[2])) for v in vertices]
 
-        # Llamamos a la función que calcula la elipse de mayor área en el polígono
-        ########################################################################################################################
-        # REVISAR EL MÉTODO IMPLEMENTADO
+        #################### BUSCAR ELIPSE #####################################
+        # MÉTODOS:
         # john_ellipse_in_polygon -> va bien
-        # john_ellipse_in_polygon_ORIGINAL -> va mejor
-        # john_ellipse_in_polygon_biomimetic -> va mal
+        # john_ellipse_in_polygon_ORIGINAL -> va mejor para poly34
+        # john_ellipse_in_polygon_ratio_constrained -> va bien para poly12
 
+        if ns_prefix=="poly_12_":
+            c, G, hull, status = john_ellipse_in_polygon_ratio_constrained(
+                vertices,
+                max_aspect_ratio=1.1,  # Relación de aspecto máxima (a/b)
+            )
 
+        elif ns_prefix=="poly_34_":
+            c, G, hull, status = john_ellipse_in_polygon_ORIGINAL(vertices)
 
-
-
-
-
-
-
-
-
-        c, G, hull, status = john_ellipse_in_polygon_ORIGINAL(vertices)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        ##################################################################################################################
+        #########################################################################
 
         if status not in ("optimal", "optimal_inaccurate") or c is None or G is None:
-            rospy.logwarn("No se pudo calcular una elipse válida.")
+            rospy.logwarn(f"No se pudo calcular una elipse {ns_prefix} válida.")
             return {
                 "centro_pixeles": (x, None, None),
                 "semi_eje_mayor_a_px": None,
@@ -337,6 +337,7 @@ class EllipseMethodNode:
         
         # Extraemos los ejes de la elipse
         a, b, v_major, v_minor, _ = ellipse_axes_from_G(G)
+        rospy.loginfo(f"{ns_prefix} Elipse calculada: a={a*100:.2f} cm, b={b*100:.2f} cm")
 
         # Calculamos el ángulo del eje mayor
         angle_deg = degrees(atan2(v_major[1], v_major[0]))
@@ -375,7 +376,8 @@ class EllipseMethodNode:
         dedo2 - semiplano y negativo
         
         """
-
+        z_offset = +0.012 # CORRECCION ERROR EN EL MODELADO DEL AGARRE ENTRE ROBOT Y GRIPPER
+        
         TF_base_gripper_to_base_dedo12_x = -0.04
         TF_base_gripper_to_base_dedo12_y = 0.0
         TF_base_gripper_to_base_dedo12_z = 0.058
@@ -393,12 +395,12 @@ class EllipseMethodNode:
         if name == "dedo1_dedo2":
             P0 = np.array([TF_base_gripper_to_base_dedo12_x, 
                            TF_base_gripper_to_base_dedo12_y, 
-                           TF_base_gripper_to_base_dedo12_z])  # Origen en base_gripper dedo10 y dedo20
+                           TF_base_gripper_to_base_dedo12_z + z_offset])  # Origen en base_gripper dedo10 y dedo20
 
         elif name == "dedo3_dedo4":
             P0 = np.array([TF_base_gripper_to_base_dedo34_x, 
                            TF_base_gripper_to_base_dedo34_y, 
-                           TF_base_gripper_to_base_dedo34_z])  # Origen en base_gripper dedo30 y dedo40
+                           TF_base_gripper_to_base_dedo34_z + z_offset])  # Origen en base_gripper dedo30 y dedo40
         else:
             rospy.logerr(f"get_vertices_by_shape_from_gripper: Nombre desconocido {name}")
             P0 = np.array([0.0, 0.0, 0.0])
@@ -535,6 +537,109 @@ class EllipseMethodNode:
         self.publish_pointstamped(self.new_elbow_pub, new_elbow, frame_id=self.frame_id)
         self.publish_pointstamped(self.new_wrist_pub, new_wrist, frame_id=self.frame_id)
     
+    def draw_forearm_volume(self, info_12, info_34, d1, d2, step=20):
+        """
+        Dibuja el volumen (wireframe) entre la elipse 12 y la elipse 34,
+        extendiéndolo:
+        - d1 más allá de la elipse 34 siguiendo la dirección local de la superficie (p12[i] -> p34[i])
+        - d2 más allá de la elipse 12 siguiendo la dirección local opuesta (p34[i] -> p12[i])
+        """
+        if info_12 is None or info_34 is None:
+            return
+
+        pts_12 = info_12.get("elipse_vertices")  # Nx3
+        pts_34 = info_34.get("elipse_vertices")  # Nx3
+        if pts_12 is None or pts_34 is None:
+            return
+
+        n = min(len(pts_12), len(pts_34))
+        if n < 2:
+            return
+
+        # --- 1) Direcciones locales de la superficie ---
+        # Para cada i: dir_i = normalize(pts_34[i] - pts_12[i])
+        dirs = pts_34[:n] - pts_12[:n]
+        norms = np.linalg.norm(dirs, axis=1)
+
+        # Fallback: si alguna norma es ~0, usamos la dirección centro->centro
+        c12 = np.array(info_12.get("centro_pixeles"), dtype=float)
+        c34 = np.array(info_34.get("centro_pixeles"), dtype=float)
+        vec_global = c34 - c12
+        ng = np.linalg.norm(vec_global)
+        if ng < 1e-9:
+            vec_global = np.array([1.0, 0.0, 0.0])
+        else:
+            vec_global = vec_global / ng
+
+        dirs_unit = np.zeros_like(dirs)
+        ok = norms > 1e-9
+        dirs_unit[ok] = dirs[ok] / norms[ok][:, None]
+        dirs_unit[~ok] = vec_global  # fallback local
+
+        # --- 2) Elipses extendidas usando la dirección local (no un vector global fijo) ---
+        d1 = float(d1)
+        d2 = float(d2)
+        pts_34_ext = pts_34[:n] + dirs_unit * d1
+        pts_12_ext = pts_12[:n] - dirs_unit * d2
+
+        # --- 3) Wireframe longitudinal (LINE_LIST) ---
+        marker = Marker()
+        marker.header.frame_id = self.frame_id
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "forearm_volume"
+        marker.id = 0
+        marker.type = Marker.LINE_LIST
+        marker.action = Marker.ADD
+        marker.scale.x = 0.002
+
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 1.0
+        marker.color.a = 0.4
+
+        marker.points = []
+
+        step = max(1, int(step))
+        for i in range(0, n, step):
+            p12e = Point(x=float(pts_12_ext[i][0]), y=float(pts_12_ext[i][1]), z=float(pts_12_ext[i][2]))
+            p12  = Point(x=float(pts_12[i][0]),     y=float(pts_12[i][1]),     z=float(pts_12[i][2]))
+            p34  = Point(x=float(pts_34[i][0]),     y=float(pts_34[i][1]),     z=float(pts_34[i][2]))
+            p34e = Point(x=float(pts_34_ext[i][0]), y=float(pts_34_ext[i][1]), z=float(pts_34_ext[i][2]))
+
+            # Prolongación proximal: 12_ext -> 12
+            marker.points.append(p12e); marker.points.append(p12)
+
+            # Tramo central: 12 -> 34
+            marker.points.append(p12); marker.points.append(p34)
+
+            # Prolongación distal: 34 -> 34_ext
+            marker.points.append(p34); marker.points.append(p34e)
+
+        self.marker_pub.publish(marker)
+
+        # --- 4) Anillos finales (caps) ---
+        def publish_ring(ns, mid, pts_ring, thickness=0.004, alpha=0.85):
+            ring = Marker()
+            ring.header.frame_id = self.frame_id
+            ring.header.stamp = rospy.Time.now()
+            ring.ns = ns
+            ring.id = mid
+            ring.type = Marker.LINE_STRIP
+            ring.action = Marker.ADD
+            ring.scale.x = thickness
+            ring.color.r = 0.0
+            ring.color.g = 1.0
+            ring.color.b = 1.0
+            ring.color.a = alpha
+            ring.points = [Point(x=float(p[0]), y=float(p[1]), z=float(p[2])) for p in pts_ring]
+            ring.points.append(Point(x=float(pts_ring[0][0]), y=float(pts_ring[0][1]), z=float(pts_ring[0][2])))
+            self.marker_pub.publish(ring)
+
+        publish_ring("forearm_cap_12_ext", 1, pts_12_ext)
+        publish_ring("forearm_cap_34_ext", 2, pts_34_ext)
+
+
+
     def normal_point_to_q2(self, dedoX, dedoY, frame_base="base_gripper"):
         """
         Calcula el punto de corte entre las normales desplazadas de las falanges 2 de dedo1 y dedo2.
@@ -656,104 +761,128 @@ class EllipseMethodNode:
             cent_12 = centroide_poligono(verts_12)
             cent_34 = centroide_poligono(verts_34)
 
+            rospy.loginfo(f"Centroides geométricos 1-2: {cent_12}")
+            rospy.loginfo(f"Centroides geométricos 3-4: {cent_34}")
+
+            info_12_dict = None
+            info_34_dict = None
+
             # 4. Calcular Elipses y SUSTITUIR centroides
             if INFER_ELLIPSE:
                 # Intentar obtener centro de elipse para 3-4
-                ellipse_center_34 = self.process_ellipse_for_polygon(verts_34, ns_prefix="poly_34_")
-                if ellipse_center_34 is not None:
-                    cent_34 = ellipse_center_34 # <--- Aquí se sustituye el centroide por el de la elipse
-                    dummy = 0  # Solo para evitar warning de variable no usada
+                ellipse_center_34, info_34_dict = self.process_ellipse_for_polygon(verts_34, ns_prefix="poly_34_")
+                if ellipse_center_34 is not None and SUSTITUIR_CENTROIDE_POR_ELIPSE:
+                    cent_34[1:] = ellipse_center_34[1:] # <--- Aquí se sustituye el centroide por el de la elipse
 
                 # Intentar obtener centro de elipse para 1-2
-                ellipse_center_12 = self.process_ellipse_for_polygon(verts_12, ns_prefix="poly_12_")
-                if ellipse_center_12 is not None:
-                    cent_12 = ellipse_center_12 # <--- Aquí se sustituye el centroide por el de la elipse
-                    dummy = 0  # Solo para evitar warning de variable no usada
+                ellipse_center_12, info_12_dict = self.process_ellipse_for_polygon(verts_12, ns_prefix="poly_12_")
+                
+                if ellipse_center_12 is not None and SUSTITUIR_CENTROIDE_POR_ELIPSE:
+                    cent_12[1:] = ellipse_center_12[1:] # <--- Aquí se sustituye el centroide por el de la elipse
 
             # 5. Publicar los puntos definitivos (sean geométricos o de elipse)
             if cent_12 is not None: 
                 self.publish_pointstamped(self.centroide12_pub, cent_12, frame_id=self.frame_id)
+                rospy.loginfo(f"Centroide 1-2: {cent_12}")
             if cent_34 is not None: 
                 self.publish_pointstamped(self.centroide34_pub, cent_34, frame_id=self.frame_id)
+                rospy.loginfo(f"Centroide 3-4: {cent_34}")
 
             # 6. Calcular Antebrazo (Usará los nuevos centros de elipse si existen)
             if FOREARM_CALCULATION:
                 self.calculate_forearm_general(cent_12, cent_34)
+                
+                # --- NUEVO: DIBUJAR VOLUMEN ---
+                if info_12_dict is not None and info_34_dict is not None:
+                    d1 = 0.10  # extensión más allá de elipse34 (metros)
+                    d2 = 0.20  # extensión más allá de elipse12 (metros)
+                    self.draw_forearm_volume(info_12_dict, info_34_dict, d1, d2)
 
             self.rate.sleep()
 
     def process_ellipse_for_polygon(self, vertices, ns_prefix=""):
-        """ 
-        Calcula, dibuja y devuelve el centro de la elipse.
-        Returns: np.array([x, y, z]) del centro o None si falla.
-        """
-        if not vertices: return None
+            """ 
+            Calcula, dibuja y devuelve el centro de la elipse.
+            Returns: np.array([x, y, z]) del centro o None si falla.
+            """
+            if not vertices: return None, None
 
-        # Adelgazamiento
-        vertices_2d = [v[1:] for v in vertices] # YZ
-        x_cota = vertices[0][0]
-        
-        try:
-            poly_shapely = Polygon(vertices_2d)
-            # Si usas adelgazamiento, el centro será del polígono interior
-            poly_inset = poly_shapely.buffer(-ESPESOR_ADELGAZAMIENTO)
+            # Adelgazamiento
+            vertices_2d = [v[1:] for v in vertices] # YZ
+            x_cota = vertices[0][0]
             
-            if poly_inset.is_empty: 
-                return None
+            try:
+                poly_shapely = Polygon(vertices_2d)
+                # Si usas adelgazamiento, el centro será del polígono interior
+                poly_inset = poly_shapely.buffer(-ESPESOR_ADELGAZAMIENTO)
+                
+                if poly_inset.is_empty: 
+                    return None, None
 
-            # Manejo de MultiPolygon si el adelgazamiento divide la figura
-            if poly_inset.geom_type == 'Polygon':
-                coords = list(poly_inset.exterior.coords)[:-1]
-            elif poly_inset.geom_type == 'MultiPolygon':
-                coords = list(max(poly_inset.geoms, key=lambda a: a.area).exterior.coords)[:-1]
-            else:
-                return None
+                # Manejo de MultiPolygon si el adelgazamiento divide la figura
+                if poly_inset.geom_type == 'Polygon':
+                    coords = list(poly_inset.exterior.coords)[:-1]
+                elif poly_inset.geom_type == 'MultiPolygon':
+                    coords = list(max(poly_inset.geoms, key=lambda a: a.area).exterior.coords)[:-1]
+                else:
+                    return None, None
 
-            vertices_inset_3d = [(x_cota, y, z) for y, z in coords]
+                vertices_inset_3d = [(x_cota, y, z) for y, z in coords]
+                
+                # Calcular Elipse
+                info = self.calculate_ellipse_from_vertices(vertices_inset_3d, ns_prefix=ns_prefix)
+                
+                # --- VALIDACIÓN DE ÁNGULOS (Añadido 'is not None') ---
+                if ns_prefix == "poly_34_" and info.get("angulo_eje_mayor_grados") is not None:
+                    angle = info["angulo_eje_mayor_grados"] % 180.0
+                    msg = AngleStamped()
+                    msg.header.stamp = rospy.Time.now()
+                    msg.angle = angle - 90 
+                    self.angle_pub_34.publish(msg)
+
+                elif ns_prefix == "poly_12_" and info.get("angulo_eje_mayor_grados") is not None:
+                    angle = info["angulo_eje_mayor_grados"] % 180.0
+                    msg = AngleStamped()
+                    msg.header.stamp = rospy.Time.now()
+                    msg.angle = angle - 90 
+                    self.angle_pub_12.publish(msg)
+
+                # --- CORRECCIÓN DEL ERROR ---
+                center_data = info.get("centro_pixeles")
+                
+                # Comprobamos si la tupla es None O si el segundo elemento (la coordenada Y) es None
+                if center_data is None or center_data[1] is None:
+                    return None, None
+
+                curr_center = np.array(center_data, dtype=float) # Aseguramos que sea float
+
+                # --- FILTRADO SUAVIZADO CORREGIDO ---
+                
+                # 1. Seleccionar la memoria adecuada según el prefijo
+                prev_center = None
+                if ns_prefix == "poly_12_":
+                    prev_center = self.prev_center_12
+                elif ns_prefix == "poly_34_":
+                    prev_center = self.prev_center_34
+                
+                # 2. Aplicar filtro
+                if prev_center is None:
+                    smooth_center = curr_center
+                else:
+                    # Filtro: Nuevo = Alpha * Actual + (1-Alpha) * Anterior
+                    smooth_center = self.alpha * curr_center + (1 - self.alpha) * prev_center
             
-            # Calcular Elipse
-            info = self.calculate_ellipse_from_vertices(vertices_inset_3d, ns_prefix=ns_prefix)
-            
-            
-            if ns_prefix == "poly_34_" and info.get("angulo_eje_mayor_grados"):
+                # 3. Guardar en la memoria correspondiente
+                if ns_prefix == "poly_12_":
+                    self.prev_center_12 = smooth_center
+                elif ns_prefix == "poly_34_":
+                    self.prev_center_34 = smooth_center
+                
+                return smooth_center, info
 
-                # Normalizar ángulo a [0, 180)
-                angle = info["angulo_eje_mayor_grados"] % 180.0
-                msg = AngleStamped()
-                msg.header.stamp = rospy.Time.now()
-                msg.angle = angle - 90 # Coincidente con q5
-
-                self.angle_pub_34.publish(msg)
-
-            elif ns_prefix == "poly_12_" and info.get("angulo_eje_mayor_grados"):
-                # Normalizar ángulo a [0, 180)
-                angle = info["angulo_eje_mayor_grados"] % 180.0
-                msg = AngleStamped()
-                msg.header.stamp = rospy.Time.now()
-                msg.angle = angle - 90 # Coincidente con q5
-
-                self.angle_pub_12.publish(msg)
-
-            if info.get("centro_pixeles") is None:
-                return None
-
-            curr_center = np.array(info["centro_pixeles"]) # (x, y, z)
-
-            # --- FILTRADO SUAVIZADO ---
-            if self.prev_center is None:
-                smooth_center = curr_center
-            else:
-                # Filtro: Nuevo = Alpha * Actual + (1-Alpha) * Anterior
-                smooth_center = self.alpha * curr_center + (1 - self.alpha) * self.prev_center
-        
-            # Actualizar memoria
-            self.prev_center = smooth_center
-            
-            return smooth_center
-
-        except Exception as e:
-            rospy.logerr(f"Error procesando elipse {ns_prefix}: {e}")
-            return None
+            except Exception as e:
+                rospy.logerr(f"Error procesando elipse {ns_prefix}: {e}")
+                return None, None
 
 if __name__ == '__main__':
     try:
