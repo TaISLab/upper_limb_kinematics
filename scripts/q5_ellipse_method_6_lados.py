@@ -59,7 +59,8 @@ corregir_medicion_flag = True # Los encoders magnéticos de la garra tienen una 
 ESPESOR_ADELGAZAMIENTO = 0.0075 # Metros
 
 # GRASP
-GRASP_OFFSET = 0.1 # HARDCODED [metros]
+GET_D_GRASP_FROM_ROS_PARAM = True
+GRASP_OFFSET = 0.04699 # HARDCODED [metros]
 
 # --- OPCIONES DE CÁLCULO ---
 SUSTITUIR_CENTROIDE_POR_ELIPSE = False  # True -> usar centro de elipse; False -> usar centroide geométrico
@@ -134,8 +135,11 @@ class EllipseMethodNode:
         # rospy params
         self.l1 = rospy.get_param('/exp_optitrack_25/l1', 0.3)  # Longitud del brazo
         self.l2 = rospy.get_param('/exp_optitrack_25/l2', 0.3)  # Longitud del antebrazo
-        # self.grasp_offset = rospy.get_param('/exp_optitrack_25/grasp_offset', 0.1)  # Offset del punto de agarre
-        self.grasp_offset = GRASP_OFFSET
+        
+        if GET_D_GRASP_FROM_ROS_PARAM:
+            self.grasp_offset = rospy.get_param('/exp_optitrack_25/d_grasp_measured', GRASP_OFFSET)  # Offset del punto de agarre
+        else:
+            self.grasp_offset = GRASP_OFFSET
 
         rospy.loginfo(f"L2 (get from ros params): {self.l2} m")
         rospy.loginfo(f"Grasp offset (get from ros params): {self.grasp_offset} m")
@@ -898,12 +902,12 @@ class EllipseMethodNode:
                     # ... dentro del bucle run, después de calcular v_fore_gripper ...
                     
                     # CHIVATO 1: Ver si llegamos aquí
-                    rospy.loginfo("Calculando intersección...")
+                    # rospy.loginfo("Calculando intersección...")
 
                     candidates = intersection_sphere_line(self.rshoulder, self.l1, p_wrist, v_fore_gripper)
                     
                     # CHIVATO 2: Ver cuántos candidatos devuelve
-                    rospy.loginfo(f"Candidatos encontrados: {len(candidates)}")
+                    # rospy.loginfo(f"Candidatos encontrados: {len(candidates)}")
 
                     best_elbow = None
                     

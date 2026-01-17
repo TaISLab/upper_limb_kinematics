@@ -1,0 +1,832 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /TF1
+        - /TF1/Frames1
+        - /TF1/Tree1
+        - /epipolar_debug1
+        - /Marker_robust1
+      Splitter Ratio: 0.6284722089767456
+    Tree Height: 861
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: PoseCloud
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: base_link
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        base_gripper:
+          Value: false
+        base_link:
+          Value: true
+        camera1_aligned_depth_to_color_frame:
+          Value: false
+        camera1_bottom_screw_frame:
+          Value: false
+        camera1_color_frame:
+          Value: false
+        camera1_color_optical_frame:
+          Value: true
+        camera1_depth_frame:
+          Value: false
+        camera1_depth_optical_frame:
+          Value: false
+        camera1_infra1_frame:
+          Value: false
+        camera1_infra1_optical_frame:
+          Value: false
+        camera1_infra2_frame:
+          Value: false
+        camera1_infra2_optical_frame:
+          Value: false
+        camera1_link:
+          Value: false
+        camera2_aligned_depth_to_color_frame:
+          Value: false
+        camera2_bottom_screw_frame:
+          Value: false
+        camera2_color_frame:
+          Value: false
+        camera2_color_optical_frame:
+          Value: true
+        camera2_depth_frame:
+          Value: false
+        camera2_depth_optical_frame:
+          Value: false
+        camera2_infra1_frame:
+          Value: false
+        camera2_infra1_optical_frame:
+          Value: false
+        camera2_infra2_frame:
+          Value: false
+        camera2_infra2_optical_frame:
+          Value: false
+        camera2_link:
+          Value: false
+        camera3_aligned_depth_to_color_frame:
+          Value: false
+        camera3_bottom_screw_frame:
+          Value: false
+        camera3_color_frame:
+          Value: false
+        camera3_color_optical_frame:
+          Value: true
+        camera3_depth_frame:
+          Value: false
+        camera3_depth_optical_frame:
+          Value: false
+        camera3_infra1_frame:
+          Value: false
+        camera3_infra1_optical_frame:
+          Value: false
+        camera3_infra2_frame:
+          Value: false
+        camera3_infra2_optical_frame:
+          Value: false
+        camera3_link:
+          Value: false
+        camera4_aligned_depth_to_color_frame:
+          Value: false
+        camera4_bottom_screw_frame:
+          Value: false
+        camera4_color_frame:
+          Value: false
+        camera4_color_optical_frame:
+          Value: true
+        camera4_depth_frame:
+          Value: false
+        camera4_depth_optical_frame:
+          Value: false
+        camera4_infra1_frame:
+          Value: false
+        camera4_infra1_optical_frame:
+          Value: false
+        camera4_infra2_frame:
+          Value: false
+        camera4_infra2_optical_frame:
+          Value: false
+        camera4_link:
+          Value: false
+        dedo1_link0:
+          Value: false
+        dedo1_link02:
+          Value: false
+        dedo1_link1:
+          Value: false
+        dedo1_link2:
+          Value: false
+        dedo2_link0:
+          Value: false
+        dedo2_link02:
+          Value: false
+        dedo2_link1:
+          Value: false
+        dedo2_link2:
+          Value: false
+        dedo3_link0:
+          Value: false
+        dedo3_link02:
+          Value: false
+        dedo3_link1:
+          Value: false
+        dedo3_link2:
+          Value: false
+        dedo4_link0:
+          Value: false
+        dedo4_link02:
+          Value: false
+        dedo4_link1:
+          Value: false
+        dedo4_link2:
+          Value: false
+        fr3_EE:
+          Value: true
+        fr3_K:
+          Value: false
+        fr3_NE:
+          Value: false
+        fr3_link0:
+          Value: false
+        fr3_link0_sc:
+          Value: false
+        fr3_link1:
+          Value: false
+        fr3_link1_sc:
+          Value: false
+        fr3_link2:
+          Value: false
+        fr3_link2_sc:
+          Value: false
+        fr3_link3:
+          Value: false
+        fr3_link3_sc:
+          Value: false
+        fr3_link4:
+          Value: false
+        fr3_link4_sc:
+          Value: false
+        fr3_link5:
+          Value: false
+        fr3_link5_sc:
+          Value: false
+        fr3_link6:
+          Value: false
+        fr3_link6_sc:
+          Value: false
+        fr3_link7:
+          Value: false
+        fr3_link7_sc:
+          Value: false
+        fr3_link8:
+          Value: false
+        soporte_gripper:
+          Value: false
+      Marker Alpha: 1
+      Marker Scale: 0.5
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        base_link:
+          camera1_bottom_screw_frame:
+            camera1_link:
+              camera1_aligned_depth_to_color_frame:
+                {}
+              camera1_color_frame:
+                {}
+              camera1_depth_frame:
+                camera1_depth_optical_frame:
+                  {}
+              camera1_infra1_frame:
+                camera1_infra1_optical_frame:
+                  {}
+              camera1_infra2_frame:
+                camera1_infra2_optical_frame:
+                  {}
+          camera1_color_optical_frame:
+            {}
+          camera2_bottom_screw_frame:
+            camera2_link:
+              camera2_aligned_depth_to_color_frame:
+                {}
+              camera2_color_frame:
+                {}
+              camera2_depth_frame:
+                camera2_depth_optical_frame:
+                  {}
+              camera2_infra1_frame:
+                camera2_infra1_optical_frame:
+                  {}
+              camera2_infra2_frame:
+                camera2_infra2_optical_frame:
+                  {}
+          camera2_color_optical_frame:
+            {}
+          camera3_bottom_screw_frame:
+            camera3_link:
+              camera3_aligned_depth_to_color_frame:
+                {}
+              camera3_color_frame:
+                {}
+              camera3_depth_frame:
+                camera3_depth_optical_frame:
+                  {}
+              camera3_infra1_frame:
+                camera3_infra1_optical_frame:
+                  {}
+              camera3_infra2_frame:
+                camera3_infra2_optical_frame:
+                  {}
+          camera3_color_optical_frame:
+            {}
+          camera4_bottom_screw_frame:
+            camera4_link:
+              camera4_aligned_depth_to_color_frame:
+                {}
+              camera4_color_frame:
+                {}
+              camera4_depth_frame:
+                camera4_depth_optical_frame:
+                  {}
+              camera4_infra1_frame:
+                camera4_infra1_optical_frame:
+                  {}
+              camera4_infra2_frame:
+                camera4_infra2_optical_frame:
+                  {}
+          camera4_color_optical_frame:
+            {}
+          fr3_link0:
+            fr3_link0_sc:
+              {}
+            fr3_link1:
+              fr3_link1_sc:
+                {}
+              fr3_link2:
+                fr3_link2_sc:
+                  {}
+                fr3_link3:
+                  fr3_link3_sc:
+                    {}
+                  fr3_link4:
+                    fr3_link4_sc:
+                      {}
+                    fr3_link5:
+                      fr3_link5_sc:
+                        {}
+                      fr3_link6:
+                        fr3_link6_sc:
+                          {}
+                        fr3_link7:
+                          fr3_link7_sc:
+                            {}
+                          fr3_link8:
+                            fr3_NE:
+                              fr3_EE:
+                                fr3_K:
+                                  {}
+                            soporte_gripper:
+                              base_gripper:
+                                dedo1_link0:
+                                  dedo1_link02:
+                                    {}
+                                dedo1_link1:
+                                  dedo1_link2:
+                                    {}
+                                dedo2_link0:
+                                  dedo2_link02:
+                                    {}
+                                dedo2_link1:
+                                  dedo2_link2:
+                                    {}
+                                dedo3_link0:
+                                  dedo3_link02:
+                                    {}
+                                dedo3_link1:
+                                  dedo3_link2:
+                                    {}
+                                dedo4_link0:
+                                  dedo4_link02:
+                                    {}
+                                dedo4_link1:
+                                  dedo4_link2:
+                                    {}
+      Update Interval: 0
+      Value: true
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /camera4/hand/pose_img
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: false
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /camera3/hand/pose_img
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud
+      Color: 114; 159; 207
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PoseCloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.03999999910593033
+      Style: Spheres
+      Topic: /skeleton_3d/keypoints
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /skeleton_3d/connectors
+      Name: Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /hand_pose_3d_markers
+          Name: HandMarker
+          Namespaces:
+            {}
+          Queue Size: 1
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: HandPoints
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.013000000268220901
+          Style: Spheres
+          Topic: /hand_pose_3d_pointcloud
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: false
+      Name: hand_pose_3d
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /camera1/color/epipolar_intersection
+          Name: camera1
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            "": true
+            Grid: true
+            Image: true
+            Marker: false
+            Marker_robust: true
+            PoseCloud: true
+            PoseCloud_robust: true
+            RobotModel: true
+            TF: true
+            Value: true
+            epipolar_debug:
+              Value: true
+              camera2: true
+              camera3: true
+              camera4: true
+            hand_pose_3d:
+              HandMarker: true
+              HandPoints: true
+              Value: true
+            intersection_of_planes: true
+            normal_vector: true
+            optitrack: true
+            planes: true
+            tactile_elbow: true
+            tactile_wrist: true
+            wrist: true
+          Zoom Factor: 0.30000001192092896
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /camera2/color/epipolar_intersection
+          Name: camera2
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            "": true
+            Grid: true
+            Image: true
+            Marker: false
+            Marker_robust: true
+            PoseCloud: true
+            PoseCloud_robust: true
+            RobotModel: true
+            TF: true
+            Value: true
+            epipolar_debug:
+              Value: true
+              camera1: true
+              camera3: true
+              camera4: true
+            hand_pose_3d:
+              HandMarker: true
+              HandPoints: true
+              Value: true
+            intersection_of_planes: true
+            normal_vector: true
+            optitrack: true
+            planes: true
+            tactile_elbow: true
+            tactile_wrist: true
+            wrist: true
+          Zoom Factor: 0.30000001192092896
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /camera3/color/epipolar_intersection
+          Name: camera3
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            "": true
+            Grid: true
+            Image: true
+            Marker: false
+            Marker_robust: true
+            PoseCloud: true
+            PoseCloud_robust: true
+            RobotModel: true
+            TF: true
+            Value: true
+            epipolar_debug:
+              Value: true
+              camera1: true
+              camera2: true
+              camera4: true
+            hand_pose_3d:
+              HandMarker: true
+              HandPoints: true
+              Value: true
+            intersection_of_planes: true
+            normal_vector: true
+            optitrack: true
+            planes: true
+            tactile_elbow: true
+            tactile_wrist: true
+            wrist: true
+          Zoom Factor: 0.30000001192092896
+        - Class: rviz/Camera
+          Enabled: true
+          Image Rendering: background and overlay
+          Image Topic: /camera4/color/epipolar_intersection
+          Name: camera4
+          Overlay Alpha: 0.5
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+          Visibility:
+            "": true
+            Grid: true
+            Image: true
+            Marker: false
+            Marker_robust: true
+            PoseCloud: true
+            PoseCloud_robust: true
+            RobotModel: true
+            TF: true
+            Value: true
+            epipolar_debug:
+              Value: true
+              camera1: true
+              camera2: true
+              camera3: true
+            hand_pose_3d:
+              HandMarker: true
+              HandPoints: true
+              Value: true
+            intersection_of_planes: true
+            normal_vector: true
+            optitrack: true
+            planes: true
+            tactile_elbow: true
+            tactile_wrist: true
+            wrist: true
+          Zoom Factor: 0.30000001192092896
+      Enabled: false
+      Name: epipolar_debug
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /forearm_plane_marker
+      Name: planes
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /wrist_line_marker
+      Name: intersection_of_planes
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: RobotModel
+      Robot Description: robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: RobotModel
+      Robot Description: gripper_4f/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /wrist_normal_marker
+      Name: normal_vector
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /wrist_point_marker
+      Name: wrist
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud
+      Color: 204; 0; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PoseCloud_robust
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.03999999910593033
+      Style: Spheres
+      Topic: /skeleton_3D_robust/keypoints
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /skeleton_3D_robust/connectors
+      Name: Marker_robust
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /optitrack/markers
+      Name: optitrack
+      Namespaces:
+        optitrack_skeleton: true
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 204; 41; 204
+      Enabled: true
+      History Length: 1
+      Name: tactile_wrist
+      Queue Size: 10
+      Radius: 0.009999999776482582
+      Topic: /tactile/wrist
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 204; 41; 204
+      Enabled: true
+      History Length: 1
+      Name: tactile_elbow
+      Queue Size: 10
+      Radius: 0.009999999776482582
+      Topic: /tactile/elbow
+      Unreliable: false
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /debug/shoulder_sphere
+      Name: Marker
+      Namespaces:
+        debug_geometry_sphere: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /debug/intersection_line
+      Name: Marker
+      Namespaces:
+        debug_geometry_line: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /ellipse_vertices_marker
+      Name: Marker
+      Namespaces:
+        forearm_cap_12_ext: true
+        forearm_cap_34_ext: true
+        forearm_volume: true
+        poligono_12: true
+        poligono_34: true
+      Queue Size: 100
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 1.1186836957931519
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0.6804879307746887
+        Y: 0.02188730053603649
+        Z: 0.4884435534477234
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.4547889232635498
+      Target Frame: <Fixed Frame>
+      Yaw: 1.0808441638946533
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 1012
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Image:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000200000000000001560000039afc0200000009fb000000100044006900730070006c006100790073010000003d0000039a000000c900fffffffb0000000a0056006900650077007300000002a5000000d9000000a400fffffffb0000000800540069006d006500000003710000004c0000003900fffffffb0000000a0049006d006100670065000000020b0000009e0000001600fffffffb0000000a0049006d006100670065000000026e000001690000001600fffffffb0000000e00630061006d0065007200610031000000018a0000005e0000001600fffffffb0000000e00630061006d006500720061003200000001b3000000870000001600fffffffb0000000e00630061006d006500720061003400000001f6000000ce0000001600fffffffb0000000e00630061006d006500720061003300000002790000015e0000001600ffffff00000001000001b60000039afc0200000003fc0000003d0000012e0000000000fffffffa000000000100000005fb0000000e00630061006d00650072006100310000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100320000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100330000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100340000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000002db000003b50000000000000000fb0000000a0049006d0061006700650000000171000000960000000000000000fb0000000a0049006d006100670065000000020d000001ca0000000000000000000002600000039a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Time:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 956
+  X: 0
+  Y: 0
+  camera1:
+    collapsed: false
+  camera2:
+    collapsed: false
+  camera3:
+    collapsed: false
+  camera4:
+    collapsed: false
