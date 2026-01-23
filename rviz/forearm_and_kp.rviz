@@ -4,12 +4,12 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /TF1
         - /TF1/Frames1
         - /TF1/Tree1
-        - /epipolar_debug1
-        - /Marker_robust1
-      Splitter Ratio: 0.6284722089767456
+        - /wrench_debug1
+      Splitter Ratio: 0.6029411554336548
     Tree Height: 861
   - Class: rviz/Views
     Expanded:
@@ -216,6 +216,8 @@ Visualization Manager:
           Value: false
         fr3_link8:
           Value: false
+        human_arm:
+          Value: true
         soporte_gripper:
           Value: false
       Marker Alpha: 1
@@ -349,6 +351,8 @@ Visualization Manager:
                                 dedo4_link1:
                                   dedo4_link2:
                                     {}
+          human_arm:
+            {}
       Update Interval: 0
       Value: true
     - Class: rviz/Image
@@ -404,13 +408,13 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /skeleton_3d/connectors
-      Name: Marker
+      Name: bones
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Group
       Displays:
         - Class: rviz/Marker
@@ -464,7 +468,6 @@ Visualization Manager:
           Unreliable: false
           Value: true
           Visibility:
-            "": true
             Grid: true
             Image: true
             Marker: false
@@ -474,14 +477,16 @@ Visualization Manager:
             RobotModel: true
             TF: true
             Value: true
+            dummy_elbow: true
+            dummy_wrist: true
+            ellipses: true
             epipolar_debug:
               Value: true
               camera2: true
               camera3: true
               camera4: true
             hand_pose_3d:
-              HandMarker: true
-              HandPoints: true
+              "": true
               Value: true
             intersection_of_planes: true
             normal_vector: true
@@ -489,6 +494,7 @@ Visualization Manager:
             planes: true
             tactile_elbow: true
             tactile_wrist: true
+            wrench_debug: true
             wrist: true
           Zoom Factor: 0.30000001192092896
         - Class: rviz/Camera
@@ -502,7 +508,6 @@ Visualization Manager:
           Unreliable: false
           Value: true
           Visibility:
-            "": true
             Grid: true
             Image: true
             Marker: false
@@ -512,14 +517,16 @@ Visualization Manager:
             RobotModel: true
             TF: true
             Value: true
+            dummy_elbow: true
+            dummy_wrist: true
+            ellipses: true
             epipolar_debug:
               Value: true
               camera1: true
               camera3: true
               camera4: true
             hand_pose_3d:
-              HandMarker: true
-              HandPoints: true
+              "": true
               Value: true
             intersection_of_planes: true
             normal_vector: true
@@ -527,6 +534,7 @@ Visualization Manager:
             planes: true
             tactile_elbow: true
             tactile_wrist: true
+            wrench_debug: true
             wrist: true
           Zoom Factor: 0.30000001192092896
         - Class: rviz/Camera
@@ -540,7 +548,6 @@ Visualization Manager:
           Unreliable: false
           Value: true
           Visibility:
-            "": true
             Grid: true
             Image: true
             Marker: false
@@ -550,14 +557,16 @@ Visualization Manager:
             RobotModel: true
             TF: true
             Value: true
+            dummy_elbow: true
+            dummy_wrist: true
+            ellipses: true
             epipolar_debug:
               Value: true
               camera1: true
               camera2: true
               camera4: true
             hand_pose_3d:
-              HandMarker: true
-              HandPoints: true
+              "": true
               Value: true
             intersection_of_planes: true
             normal_vector: true
@@ -565,6 +574,7 @@ Visualization Manager:
             planes: true
             tactile_elbow: true
             tactile_wrist: true
+            wrench_debug: true
             wrist: true
           Zoom Factor: 0.30000001192092896
         - Class: rviz/Camera
@@ -578,7 +588,6 @@ Visualization Manager:
           Unreliable: false
           Value: true
           Visibility:
-            "": true
             Grid: true
             Image: true
             Marker: false
@@ -588,14 +597,16 @@ Visualization Manager:
             RobotModel: true
             TF: true
             Value: true
+            dummy_elbow: true
+            dummy_wrist: true
+            ellipses: true
             epipolar_debug:
               Value: true
               camera1: true
               camera2: true
               camera3: true
             hand_pose_3d:
-              HandMarker: true
-              HandPoints: true
+              "": true
               Value: true
             intersection_of_planes: true
             normal_vector: true
@@ -603,6 +614,7 @@ Visualization Manager:
             planes: true
             tactile_elbow: true
             tactile_wrist: true
+            wrench_debug: true
             wrist: true
           Zoom Factor: 0.30000001192092896
       Enabled: false
@@ -623,7 +635,7 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
-    - Alpha: 1
+    - Alpha: 0.5
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -639,7 +651,7 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
-    - Alpha: 1
+    - Alpha: 0.5
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -738,13 +750,13 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /debug/shoulder_sphere
       Name: Marker
       Namespaces:
-        debug_geometry_sphere: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /debug/intersection_line
@@ -754,15 +766,54 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /ellipse_vertices_marker
       Name: Marker
       Namespaces:
-        forearm_cap_12_ext: true
-        forearm_cap_34_ext: true
-        forearm_volume: true
-        poligono_12: true
-        poligono_34: true
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /ellipse_overlay_marker
+      Name: ellipses
+      Namespaces:
+        poly_12_ellipse_diagonal_overlay: true
+        poly_12_ellipse_overlay: true
+        poly_12_poly_overlay: true
+        poly_34_ellipse_diagonal_overlay: true
+        poly_34_ellipse_overlay: true
+        poly_34_poly_overlay: true
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 252; 175; 62
+      Enabled: true
+      History Length: 1
+      Name: dummy_elbow
+      Queue Size: 10
+      Radius: 0.009999999776482582
+      Topic: /dummy/elbow
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 252; 175; 62
+      Enabled: true
+      History Length: 1
+      Name: dummy_wrist
+      Queue Size: 10
+      Radius: 0.009999999776482582
+      Topic: /dummy/wrist
+      Unreliable: false
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /wrench_line_markers
+      Name: wrench_debug
+      Namespaces:
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -786,7 +837,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.1186836957931519
+      Distance: 0.41823050379753113
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -794,32 +845,32 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.6804879307746887
-        Y: 0.02188730053603649
-        Z: 0.4884435534477234
+        X: 0.43808263540267944
+        Y: -0.16073188185691833
+        Z: 0.5188412070274353
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4547889232635498
+      Pitch: 0.42979666590690613
       Target Frame: <Fixed Frame>
-      Yaw: 1.0808441638946533
+      Yaw: 5.637940406799316
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: false
+    collapsed: true
   Height: 1012
-  Hide Left Dock: false
+  Hide Left Dock: true
   Hide Right Dock: true
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000200000000000001560000039afc0200000009fb000000100044006900730070006c006100790073010000003d0000039a000000c900fffffffb0000000a0056006900650077007300000002a5000000d9000000a400fffffffb0000000800540069006d006500000003710000004c0000003900fffffffb0000000a0049006d006100670065000000020b0000009e0000001600fffffffb0000000a0049006d006100670065000000026e000001690000001600fffffffb0000000e00630061006d0065007200610031000000018a0000005e0000001600fffffffb0000000e00630061006d006500720061003200000001b3000000870000001600fffffffb0000000e00630061006d006500720061003400000001f6000000ce0000001600fffffffb0000000e00630061006d006500720061003300000002790000015e0000001600ffffff00000001000001b60000039afc0200000003fc0000003d0000012e0000000000fffffffa000000000100000005fb0000000e00630061006d00650072006100310000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100320000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100330000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100340000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000002db000003b50000000000000000fb0000000a0049006d0061006700650000000171000000960000000000000000fb0000000a0049006d006100670065000000020d000001ca0000000000000000000002600000039a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000200000000000001560000039afc0200000009fb000000100044006900730070006c006100790073000000003d0000039a000000c900fffffffb0000000a0056006900650077007300000002a5000000d9000000a400fffffffb0000000800540069006d006500000003710000004c0000003900fffffffb0000000a0049006d006100670065000000020b0000009e0000001600fffffffb0000000a0049006d006100670065000000026e000001690000001600fffffffb0000000e00630061006d0065007200610031000000018a0000005e0000001600fffffffb0000000e00630061006d006500720061003200000001b3000000870000001600fffffffb0000000e00630061006d006500720061003400000001f6000000ce0000001600fffffffb0000000e00630061006d006500720061003300000002790000015e0000001600ffffff00000001000001b60000039afc0200000003fc0000003d0000012e0000000000fffffffa000000000100000005fb0000000e00630061006d00650072006100310000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100320000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100330000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100340000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000002db000003b50000000000000000fb0000000a0049006d0061006700650000000171000000960000000000000000fb0000000a0049006d006100670065000000020d000001ca0000000000000000000003cd0000039a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Time:
     collapsed: false
   Views:
     collapsed: false
-  Width: 956
+  Width: 973
   X: 0
   Y: 0
   camera1:

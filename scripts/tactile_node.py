@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
-from std_msgs.msg import String  # Cambia el tipo de mensaje según tus necesidades
+from std_msgs.msg import String, Bool  # Cambia el tipo de mensaje según tus necesidades
 import numpy as np
 # import cv2
 import matplotlib.pyplot as plt
@@ -11,7 +11,7 @@ import tf  # <--- Añadir esta línea para importar tf
 import tf2_ros
 import tf2_geometry_msgs
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point, PointStamped, PoseStamped
+from geometry_msgs.msg import Point, PointStamped, PoseStamped, TransformStamped, Vector3Stamped
 
 import math
 from typing import Sequence, Tuple, List
@@ -61,19 +61,62 @@ ESPESOR_ADELGAZAMIENTO = 0.0075 # Metros
 # GRASP
 GET_D_GRASP_FROM_ROS_PARAM = True
 GRASP_OFFSET = 0.04699 # HARDCODED [metros]
+USE_ROSBAG = True
+CALCULATE_Q5 = False
 
 # --- OPCIONES DE CÁLCULO ---
-SUSTITUIR_CENTROIDE_POR_ELIPSE = False  # True -> usar centro de elipse; False -> usar centroide geométrico
+SUSTITUIR_CENTROIDE_POR_ELIPSE = True  # True -> usar centro de elipse; False -> usar centroide geométrico
 GET_FROM_TF = False  # True -> vértices desde TF; False -> gripper_4f
 FOREARM_CALCULATION = True
 INFER_ELLIPSE = True
 ELBOW_AS_INTERSECTION_SPHERE_LINE = True
 
 # --- FRAMES DE REFERENCIA ---
-FRAME_ID = "base_gripper"
+FRAME_ID = "fr3_EE"
 PUBLISH_PS_IN_BASE_LINK = True # Publicar PointStamped en base_link (transformados) o en FRAME_ID (base_gripper, original)
 
 # --------------------------------------------------------
+def get_rotation_matrix(tfBuffer, source_frame, target_frame, time=rospy.Time(0)):
+    """
+    Obtiene la matriz de rotación (3x3) entre dos frames usando tf2_ros.
+    Args:
+        tfBuffer: instancia de tf2_ros.Buffer
+        source_frame: str, frame origen (por ejemplo, 'base_link')
+        target_frame: str, frame destino (por ejemplo, 'fr3_EE')
+        time: rospy.Time, tiempo de la transformación (por defecto, 0 = más reciente)
+    Returns:
+        R: np.array shape (3,3), matriz de rotación
+    """
+    trans = tfBuffer.lookup_transform(source_frame, target_frame, time)
+    q = trans.transform.rotation
+    quat = [q.x, q.y, q.z, q.w]
+    R = tf.transformations.quaternion_matrix(quat)[:3, :3]
+    return R
+
+def plane_from_points(p1, p2, p3):
+    """
+    Calcula el plano que contiene a tres puntos.
+    Args:
+        p1, p2, p3: array-like, puntos 3D (x, y, z)
+    Returns:
+        n: vector normal unitario al plano (np.array shape (3,))
+        d: término independiente (float)
+    """
+    p1 = np.array(p1, dtype=float)
+    p2 = np.array(p2, dtype=float)
+    p3 = np.array(p3, dtype=float)
+    # Vectores en el plano
+    v1 = p2 - p1
+    v2 = p3 - p1
+    # Vector normal (sentido según el orden de los puntos)
+    n = np.cross(v1, v2)
+    n_norm = np.linalg.norm(n)
+    if n_norm < 1e-9:
+        raise ValueError("Los puntos son colineales o coinciden")
+    n = n / n_norm
+    # Término independiente
+    d = -np.dot(n, p1)
+    return n, d
 
 def corregir_medicion(medicion_actual, p1, p2):
     """
@@ -128,6 +171,12 @@ class EllipseMethodNode:
         self.new_wrist_pub = rospy.Publisher('/tactile/wrist', PointStamped, queue_size=20)
         self.centro_normal_to_q2_pub = rospy.Publisher('/tactile/centro_normal_q2', PointStamped, queue_size=20)
         self.elbow_point_pub = rospy.Publisher('/tactile/elbow_point_intersection', PointStamped, queue_size=20)
+
+        # --- NUEVO: Publishers Dummy (Cinemática Pura) ---
+        self.dummy_elbow_pub = rospy.Publisher('/dummy/elbow', PointStamped, queue_size=20)
+        self.dummy_wrist_pub = rospy.Publisher('/dummy/wrist', PointStamped, queue_size=20)
+        # -------------------------------------------------
+
         # subscripción a gripper_4f
         rospy.Subscriber("/gripper_4f/encoders_data", encoders_data, self.gripper_callback)
         rospy.Subscriber("/skeleton_3D", Skeleton3D, self.skeleton_callback)
@@ -135,6 +184,14 @@ class EllipseMethodNode:
         # rospy params
         self.l1 = rospy.get_param('/exp_optitrack_25/l1', 0.3)  # Longitud del brazo
         self.l2 = rospy.get_param('/exp_optitrack_25/l2', 0.3)  # Longitud del antebrazo
+
+        # ROSBAGS
+        if USE_ROSBAG:
+            self.t_init_bag = rospy.get_param('/exp_optitrack_25/rosbag_start_time', 0.0)  # Tiempo inicial del bag
+            self.t_init_grasp = rospy.get_param('/exp_optitrack_25/phases/t_grasp', 0.0)  # Tiempo inicial de agarre
+            self.t_finish_grasp = rospy.get_param('/exp_optitrack_25/phases/t_release', 0.0)  # Tiempo final de agarre
+            self.grasp_state = rospy.Publisher("/grasp_state", Bool, queue_size=10)
+            
         
         if GET_D_GRASP_FROM_ROS_PARAM:
             self.grasp_offset = rospy.get_param('/exp_optitrack_25/d_grasp_measured', GRASP_OFFSET)  # Offset del punto de agarre
@@ -148,6 +205,7 @@ class EllipseMethodNode:
 
         self.tfBuffer = tf2_ros.Buffer()
         tf_listener = tf2_ros.TransformListener(self.tfBuffer)
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster()
 
         # Variables para filtro de suavizado (Exponential Moving Average)
         self.alpha = 0.6  # Factor de suavizado (0.0 = infinito, 1.0 = sin filtro)
@@ -163,6 +221,8 @@ class EllipseMethodNode:
         self.stamp_gripper = None
         self.stamp_skeleton = None
         self.rshoulder = None
+        self.roll_arm_ee = 0.0
+        self.v_major_34 = None  # Vector del eje mayor de la elipse dedos 3-4
 
         # --- Variables para el filtro del codo ---
         self.prev_elbow = None  # Memoria del filtro
@@ -179,6 +239,22 @@ class EllipseMethodNode:
         rshoulder = msg.keypoints[6]
         self.rshoulder = np.array([rshoulder.x, rshoulder.y, rshoulder.z])
 
+
+    def grasp_state_publisher(self):
+        """
+        Publica el estado del agarre en el tópico /grasp_state.
+        Args:
+            bool is_grasping: True si está en fase de agarre, False si no.
+        """
+
+        current_time = rospy.get_time()
+        elapsed_time = current_time - self.t_init_bag
+
+        is_grasping = self.t_init_grasp <= elapsed_time <= self.t_finish_grasp
+
+        grasp_msg = Bool()
+        grasp_msg.data = True if is_grasping else False
+        self.grasp_state.publish(grasp_msg)
         
         
 
@@ -203,7 +279,54 @@ class EllipseMethodNode:
             self.dedo3 = msg.dedo3
             self.dedo4 = msg.dedo4
     
-    def publish_vectors_marker(self, points, vectors, frame_id="base_gripper", ns="vectors", color=(0.2, 0.2, 1.0)):
+    def calculate_and_publish_dummy_kinematics(self):
+        """
+        Calcula Codo y Muñeca basándose puramente en el frame fr3_EE y los parámetros L2 y Grasp Offset.
+        - Muñeca: Dirección -X a distancia D_grasp
+        - Codo: Dirección +X a distancia (L2 - D_grasp)
+        """
+        try:
+            # Usamos el tiempo actual o el último disponible para asegurar que encontramos la tf
+            # Si quieres sincronía estricta con el gripper, usa self.stamp_gripper
+            tf_time = rospy.Time(0) 
+
+            # 1. Definir MUÑECA en frame local (fr3_EE)
+            # Dirección negativa de X a D_grasp distancia
+            p_wrist_local = PointStamped()
+            p_wrist_local.header.frame_id = "fr3_EE"
+            p_wrist_local.header.stamp = tf_time
+            p_wrist_local.point.x = -self.grasp_offset
+            p_wrist_local.point.y = 0.0
+            p_wrist_local.point.z = 0.0
+
+            # 2. Definir CODO en frame local (fr3_EE)
+            # Dirección positiva como L2 - D_grasp
+            p_elbow_local = PointStamped()
+            p_elbow_local.header.frame_id = "fr3_EE"
+            p_elbow_local.header.stamp = tf_time
+            p_elbow_local.point.x = self.l2 - self.grasp_offset
+            p_elbow_local.point.y = 0.0
+            p_elbow_local.point.z = 0.0
+
+            # 3. Transformar a base_link y publicar
+            # (Es necesario transformar porque RViz suele tener fixed frame en base_link/world)
+            if self.tfBuffer.can_transform("base_link", "fr3_EE", tf_time, rospy.Duration(0.1)):
+                p_wrist_global = self.tfBuffer.transform(p_wrist_local, "base_link")
+                p_elbow_global = self.tfBuffer.transform(p_elbow_local, "base_link")
+                
+                # Actualizar timestamp al momento de publicación si usamos Time(0) para TF
+                p_wrist_global.header.stamp = rospy.Time.now()
+                p_elbow_global.header.stamp = rospy.Time.now()
+
+                self.dummy_wrist_pub.publish(p_wrist_global)
+                self.dummy_elbow_pub.publish(p_elbow_global)
+            else:
+                rospy.logwarn_throttle(2.0, "No se encuentra transformación de fr3_EE a base_link para dummy kinematics")
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            rospy.logwarn_throttle(2.0, f"Error en dummy kinematics TF: {e}")
+
+    def publish_vectors_marker(self, points, vectors, frame_id="fr3_EE", ns="vectors", color=(0.2, 0.2, 1.0)):
         """
         Publica los vectores como Marker tipo ARROW en RViz.
         Args:
@@ -249,7 +372,7 @@ class EllipseMethodNode:
             marker.points.append(p_end)
             self.marker_pub.publish(marker)
 
-    def publish_vertices_marker(self, vertices, frame_id="base_gripper", ns="ellipse_vertices", id=0):
+    def publish_vertices_marker(self, vertices, frame_id="fr3_EE", ns="ellipse_vertices", id=0):
         """
         Publica los vértices como un Marker tipo SPHERE_LIST en RViz.
         Versión flexible: Acepta cualquier lista de vértices (3, 4, 5, 6...).
@@ -290,7 +413,7 @@ class EllipseMethodNode:
 
         self.marker_pub.publish(marker)
 
-    def publish_pointstamped(self, pub, point, frame_id="base_gripper"):
+    def publish_pointstamped(self, pub, point, frame_id="fr3_EE"):
         """
         Publica un punto como geometry_msgs/PointStamped.
         Args:
@@ -364,6 +487,7 @@ class EllipseMethodNode:
                 "angulo_eje_mayor_grados": None,
                 "poligono_vertices": vertices,
                 "elipse_vertices": None,
+                "v_major_3d": None,
             }
 
         # rospy.loginfo(f"Matriz G de la elipse:\n{G}")
@@ -389,6 +513,7 @@ class EllipseMethodNode:
             "angulo_eje_mayor_grados": float(angle_deg),
             "poligono_vertices": vertices,
             "elipse_vertices": elipse_pts_with_x,  # Puntos de la elipse
+            "v_major_3d": np.array([0.0, v_major[0], v_major[1]]),  # Vector 3D del eje mayor
         }
 
     def get_vertices_by_shape_from_TF(self, shape_type, dedoX, dedoY):
@@ -409,31 +534,33 @@ class EllipseMethodNode:
         dedo2 - semiplano y negativo
         
         """
-        z_offset = +0.012 # CORRECCION ERROR EN EL MODELADO DEL AGARRE ENTRE ROBOT Y GRIPPER
+        # z_offset = +0.012 # CORRECCION ERROR EN EL MODELADO DEL AGARRE ENTRE ROBOT Y GRIPPER
+        # z_offset = 0.02
+        z_offset = 0.0
 
-        TF_base_gripper_to_base_dedo12_x = -0.04
-        TF_base_gripper_to_base_dedo12_y = 0.0
-        TF_base_gripper_to_base_dedo12_z = 0.058
+        TF_fr3_EE_to_base_dedo12_x = 0.0463
+        TF_fr3_EE_to_base_dedo12_y = 0.0
+        TF_fr3_EE_to_base_dedo12_z = -0.038
 
-        TF_base_gripper_to_base_dedo34_x = 0.04
-        TF_base_gripper_to_base_dedo34_y = 0.0
-        TF_base_gripper_to_base_dedo34_z = 0.058
+        TF_fr3_EE_to_base_dedo34_x = -0.0463
+        TF_fr3_EE_to_base_dedo34_y = 0.0
+        TF_fr3_EE_to_base_dedo34_z = -0.038
 
         l0 = 0.04 # Distancia entre origen dedo11 y dedo21 (o dedo31 y dedo41)
         l1 = 0.040  # Longitud de la primera falange
-        l2 = 0.040  # Longitud de la segunda falange
+        l2 = 0.050  # Longitud de la segunda falange
 
 
-        # TF base_gripper a base_falange (pto medio entre dedo10 y dedo20; o dedo30 y dedo40)
+        # TF fr3_EE a base_falange (pto medio entre dedo10 y dedo20; o dedo30 y dedo40)
         if name == "dedo1_dedo2":
-            P0 = np.array([TF_base_gripper_to_base_dedo12_x, 
-                           TF_base_gripper_to_base_dedo12_y, 
-                           TF_base_gripper_to_base_dedo12_z + z_offset])  # Origen en base_gripper dedo10 y dedo20
+            P0 = np.array([TF_fr3_EE_to_base_dedo12_x, 
+                           TF_fr3_EE_to_base_dedo12_y, 
+                           TF_fr3_EE_to_base_dedo12_z + z_offset])  # Origen en fr3_EE dedo10 y dedo20
 
         elif name == "dedo3_dedo4":
-            P0 = np.array([TF_base_gripper_to_base_dedo34_x, 
-                           TF_base_gripper_to_base_dedo34_y, 
-                           TF_base_gripper_to_base_dedo34_z + z_offset])  # Origen en base_gripper dedo30 y dedo40
+            P0 = np.array([TF_fr3_EE_to_base_dedo34_x, 
+                           TF_fr3_EE_to_base_dedo34_y, 
+                           TF_fr3_EE_to_base_dedo34_z + z_offset])  # Origen en fr3_EE dedo30 y dedo40
         else:
             rospy.logerr(f"get_vertices_by_shape_from_gripper: Nombre desconocido {name}")
             P0 = np.array([0.0, 0.0, 0.0])
@@ -441,6 +568,8 @@ class EllipseMethodNode:
 
         theta1 = 180 - dedo1[1] - dedo1[2]
         theta2 = 180 - dedo2[1] - dedo2[2]
+
+
 
         # imprimir ángulos para depuración
         # if name == "dedo1_dedo2":
@@ -464,6 +593,17 @@ class EllipseMethodNode:
         P4 = P0 + np.array([0.0, l0/2, 0.0])
         P5 = P4 + np.array([0.0, l1 * np.cos(np.radians(dedo1[1])), l1 * np.sin(np.radians(dedo1[1]))])
         P6 = P5 + np.array([0.0, -l2 * np.cos(np.radians(theta1)), l2 * np.sin(np.radians(theta1))])
+
+
+        # Comprobar figuras:
+        if name == "dedo1_dedo2" and shape_type == "CUATRO_LADOS" and self.check_rombo_feasibility(dedo1, dedo2) == False:
+            # rospy.logwarn_throttle(2.0, f"get_vertices_by_shape_from_gripper: No es posible formar un ROMBO con los ángulos dados: {dedo1}, {dedo2}. Usando HEXÁGONO como fallback.")
+            shape_type = "HEXAGONO"
+
+        if name == "dedo1_dedo2" and shape_type == "PENTAGONO" and self.check_pentagon_feasibility(dedo1, dedo2) == False:
+            # rospy.logwarn_throttle(2.0, f"get_vertices_by_shape_from_gripper: No es posible formar un PENTAGONO con los ángulos dados: {dedo1}, {dedo2}. Usando HEXÁGONO como fallback.")
+            shape_type = "HEXAGONO"
+
 
         if shape_type == "CUATRO_LADOS":
             # --- 1. Intersección Delantera (Hacia las puntas) ---
@@ -555,13 +695,8 @@ class EllipseMethodNode:
         if norm_proximal < 1e-6: return
         v_to_proximal /= norm_proximal
 
-        # 3. Cálculo de posiciones (Elbow y Wrist)
-        # El codo está hacia atrás (lado dedos) o hacia adelante? 
-        # Basado en tu código original: 
-        # Elbow se calcula proyectando hacia el lado 3-4 (distal) extendido L2 metros? 
-        # Ojo: En tu codigo original: v_grasp_to_elbow = v_grasp_to_34 * (l2 - offset).
-        
-        v_elbow_dir = v_to_proximal # Asumiendo que la dirección 34 es hacia wrist
+        # 3. Cálculo de posiciones (Elbow y Wrist) en local
+        v_elbow_dir = v_to_proximal 
         v_wrist_dir = v_to_distal
 
         new_elbow = grasping_point + v_elbow_dir * (self.l2 - self.grasp_offset)
@@ -569,6 +704,174 @@ class EllipseMethodNode:
 
         self.publish_pointstamped(self.new_elbow_pub, new_elbow, frame_id=self.frame_id)
         self.publish_pointstamped(self.new_wrist_pub, new_wrist, frame_id=self.frame_id)
+
+
+        if CALCULATE_Q5:
+            # --- PASO 1: OBTENER TF COMPLETA (Rotación + Traslación) ---
+            try:
+                # Buscamos la transformación T de base_link a fr3_EE
+                trans = self.tfBuffer.lookup_transform('base_link', self.frame_id, rospy.Time(0))
+                
+                # 1.1 Extraer Traslación (T)
+                t_vec = np.array([trans.transform.translation.x, 
+                                trans.transform.translation.y, 
+                                trans.transform.translation.z])
+                
+                # 1.2 Extraer Rotación (R)
+                q = trans.transform.rotation
+                R_bl_to_ee = tf.transformations.quaternion_matrix([q.x, q.y, q.z, q.w])[:3, :3]
+
+                # --- PASO 2: TRANSFORMAR PUNTOS A BASE_LINK ---
+                # Formula: P_global = R * P_local + T
+                elbow_BL = np.dot(R_bl_to_ee, new_elbow) + t_vec
+                wrist_BL = np.dot(R_bl_to_ee, new_wrist) + t_vec
+                
+                # Nota: rshoulder ya debe estar en base_link (verifícalo en tu skeleton_callback)
+                shoulder_BL = self.rshoulder 
+
+                # --- CORRECCIÓN AQUÍ: Protección contra NoneType ---
+                if shoulder_BL is None:
+                    rospy.logwarn_throttle(2.0, "Esperando datos del esqueleto (shoulder is None). Saltando cálculo de orientación del brazo.")
+                    return 
+                # ----------------------------------------------------
+
+                # --- PASO 3: DEFINIR LOS EJES DEL BRAZO (TU SISTEMA PERSONALIZADO) ---
+                
+                # EJE X_arm: Vector unitario que va del Codo a la Muñeca (Longitudinal)
+                X_arm = wrist_BL - elbow_BL
+                X_arm /= np.linalg.norm(X_arm)
+
+                # EJE Z_arm: Normal al plano Hombro-Codo-Muñeca
+                # Vector A: Hombro -> Codo
+                v_shoulder_elbow = elbow_BL - shoulder_BL # <--- Aquí fallaba antes
+                
+                # Producto Cruz para hallar la normal (Z)
+                Z_arm = np.cross(v_shoulder_elbow, X_arm)
+                norm_z = np.linalg.norm(Z_arm)
+                
+                # Protección por si el brazo está totalmente estirado (Singularidad: puntos colineales)
+                if norm_z < 1e-6:
+                    # Fallback: Usar Z del base_link o una referencia fija si están alineados
+                    Z_arm = np.array([0, 0, 1]) 
+                else:
+                    Z_arm /= norm_z
+
+                # EJE Y_arm: Para completar la base ortonormal (Z cross X)
+                Y_arm = np.cross(Z_arm, X_arm)
+                Y_arm /= np.linalg.norm(Y_arm)
+
+                # --- PASO 4: CONSTRUIR LA MATRIZ DE ROTACIÓN (R_base_arm) ---
+                # Las columnas de la matriz de rotación son los vectores unitarios X, Y, Z
+                R_base_to_arm = np.column_stack((X_arm, Y_arm, Z_arm))
+
+                # =================================================================
+                # PUBLICAR EJES EN RVIZ (TF BROADCASTER)
+                # =================================================================
+                try:
+                    # 1. Convertir Matriz 3x3 a Cuaternio (requiere matriz 4x4)
+                    T_4x4 = np.eye(4)
+                    T_4x4[:3, :3] = R_base_to_arm
+                    quat_arm = tf.transformations.quaternion_from_matrix(T_4x4)
+
+                    # 2. Crear mensaje TransformStamped
+                    t_msg = TransformStamped()
+                    t_msg.header.stamp = rospy.Time.now()
+                    t_msg.header.frame_id = "base_link"          # Frame padre
+                    t_msg.child_frame_id = "human_arm"    # Nombre del nuevo frame en RViz
+                    
+                    # 3. Asignar Posición (La muñeca en coordenadas base_link)
+                    t_msg.transform.translation.x = wrist_BL[0]
+                    t_msg.transform.translation.y = wrist_BL[1]
+                    t_msg.transform.translation.z = wrist_BL[2]
+
+                    # 4. Asignar Orientación (Los ejes calculados)
+                    t_msg.transform.rotation.x = quat_arm[0]
+                    t_msg.transform.rotation.y = quat_arm[1]
+                    t_msg.transform.rotation.z = quat_arm[2]
+                    t_msg.transform.rotation.w = quat_arm[3]
+
+                    # 5. Publicar
+                    self.tf_broadcaster.sendTransform(t_msg)
+                
+                except Exception as e:
+                    rospy.logwarn(f"Error publicando TF de ejes humanos: {e}")
+                # =================================================================
+
+
+
+                # --- PASO 5: Calcular R_Arm_EE ---
+                R_arm_to_ee = np.dot(R_base_to_arm.T, R_bl_to_ee)
+
+                diagonal_in_EE = self.v_major_34
+
+                # Transformar si el frame de destino es diferente
+
+                try:
+                    target_frame = 'human_arm'  # Frame al que se quiere transformar
+                    vector3stamped_msg = Vector3Stamped()
+                    vector3stamped_msg.header.frame_id = "fr3_EE"
+                    vector3stamped_msg.header.stamp = rospy.Time.now()
+                    vector3stamped_msg.vector.x = diagonal_in_EE[0]
+                    vector3stamped_msg.vector.y = diagonal_in_EE[1]
+                    vector3stamped_msg.vector.z = diagonal_in_EE[2]
+
+                    diagonal_arm_vector3stamped = self.tfBuffer.transform(vector3stamped_msg, target_frame, rospy.Duration(1.0))
+
+                except (tf2_ros.LookupException, tf2_ros.ExtrapolationException, tf2_ros.ConnectivityException) as e:
+                    rospy.logwarn(f"TF transform failed: {e}")
+                    return
+
+
+
+                # el sentido no tiene sentido fisico, luego, limitamos a YEE- y ZEE-
+                
+                # if diagonal_in_arm[1] > 0 and diagonal_in_arm[2] > diagonal_in_arm[1]:
+                #     diagonal_in_arm = diagonal_in_arm
+                # elif diagonal_in_arm[1] < 0 and diagonal_in_arm[2] < diagonal_in_arm[1]:
+                #     diagonal_in_arm = diagonal_in_arm
+                # else:
+                #     diagonal_in_arm = -diagonal_in_arm
+
+                diagonal_in_arm = np.array([diagonal_arm_vector3stamped.vector.x,
+                                            diagonal_arm_vector3stamped.vector.y,
+                                            diagonal_arm_vector3stamped.vector.z])
+
+                theta = atan2(diagonal_in_arm[1], diagonal_in_arm[2])  # Ángulo en el plano YZ_arm
+
+
+
+
+                if theta is not None:
+                    
+                    theta = theta % (2 * np.pi) # Asegurar que esté en [0, 2π]
+                    
+                    # if theta > np.pi:
+                    #     theta -= np.pi
+
+
+                    q5 = 90 - degrees(theta)
+
+                    rospy.loginfo(f"theta (deg): {degrees(theta):.2f} grados.")
+                    rospy.loginfo(f"q5 estimado: {q5:.2f} grados.")
+
+                    # Construir mensaje y publicar
+                    msg = AngleStamped()
+
+                    if self.stamp_gripper is not None:
+                        msg.header.stamp = self.stamp_gripper  ### INTENTO DE SINCRONIZACIÓN ###
+                    else:
+                        msg.header.stamp = rospy.Time.now()
+
+                    msg.angle = q5
+                    self.angle_pub_34.publish(msg)
+
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                rospy.logwarn(f"Error transformando a base_link: {e}")
+                return
+        
+
+
+
     
     def draw_forearm_volume(self, info_12, info_34, d1, d2, step=20):
         """
@@ -671,7 +974,7 @@ class EllipseMethodNode:
         publish_ring("forearm_cap_12_ext", 1, pts_12_ext)
         publish_ring("forearm_cap_34_ext", 2, pts_34_ext)
 
-    def normal_point_to_q2(self, dedoX, dedoY, frame_base="base_gripper"):
+    def normal_point_to_q2(self, dedoX, dedoY, frame_base="fr3_EE"):
         """
         Calcula el punto de corte entre las normales desplazadas de las falanges 2 de dedo1 y dedo2.
         """
@@ -736,52 +1039,104 @@ class EllipseMethodNode:
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             rospy.logerr("Error al obtener las transformaciones para el cálculo de corte de normales.")
             return None
+    
+    def check_rombo_feasibility(self, dedo1, dedo2):
+        """
+        Comprueba si la configuración actual de los dedos permite formar un rombo válido.
+        Args:
+            dedo1: semiplano y positivo
+            dedo2: semiplano y negativo
+        Returns:
+            True si es factible, False si no lo es.
+        """
+        
+        # Medir ángulos falange2 desde eje horizontal positivo (y+)
+        alpha1 = dedo1[1] + dedo1[2]
+        alpha2 = 180 - dedo2[1] - dedo2[2]
+        beta1 = dedo1[1]
+        beta2 = 180 - dedo2[1]
+
+        # rospy.loginfo(f"alpha1: {alpha1}")
+        # rospy.loginfo(f"alpha2: {alpha2}")
+        # rospy.loginfo(f"beta1: {beta1}")
+        # rospy.loginfo(f"beta2: {beta2}")
+
+        if alpha1 > alpha2 and beta2 > beta1:
+            return True
+        else:
+            rospy.logwarn_throttle(1, f"check_rombo_feasibility: NOT FACTIBLE")
+            return False
+          
+    def check_pentagon_feasibility(self, dedo1, dedo2):
+        """
+        Comprueba si la configuración actual de los dedos permite formar un pentagono válido.
+        Args:
+            dedo1: ángulos del dedo1
+            dedo2: ángulos del dedo2
+        Returns:
+            True si es factible, False si no lo es.
+        """
+        
+        alpha1 = dedo1[1] + dedo1[2]
+        alpha2 = 180 - dedo2[1] - dedo2[2]
+
+
+        if alpha1 < alpha2:
+            return True
+        else:
+            rospy.logwarn_throttle(1, f"check_pentagon_feasibility: NOT FACTIBLE")
+            return False
 
     def run(self):
         while not rospy.is_shutdown():
+            
+            # 0. Publicar estado del agarre. Solo para rosbag
+            if USE_ROSBAG:
+                self.grasp_state_publisher()
+            
             # 1. Obtener vértices
-
+            self.calculate_and_publish_dummy_kinematics()
             
             if GET_FROM_TF:
                 verts_12 = self.get_vertices_by_shape_from_TF(SHAPE_DEDO12, "dedo1", "dedo2")
                 verts_34 = self.get_vertices_by_shape_from_TF(SHAPE_DEDO34, "dedo3", "dedo4")
 
             else:
-                verts_12 = self.get_vertices_by_shape_from_gripper(SHAPE_DEDO12, self.dedo1, self.dedo2, name="dedo1_dedo2")
-                verts_34 = self.get_vertices_by_shape_from_gripper(SHAPE_DEDO34, self.dedo4, self.dedo3, name="dedo3_dedo4")
+                verts_12 = self.get_vertices_by_shape_from_gripper(SHAPE_DEDO12, self.dedo2, self.dedo1, name="dedo1_dedo2")
+                verts_34 = self.get_vertices_by_shape_from_gripper(SHAPE_DEDO34, self.dedo3, self.dedo4, name="dedo3_dedo4")
 
             if not verts_12 or not verts_34:
                 rospy.logwarn_throttle(2.0, "Esperando transforms...")
                 self.rate.sleep()
                 continue
             
-            # Verificar que se obtienen los puntos necesarios según la forma seleccionada
-            if SHAPE_DEDO12 == "PENTAGONO" and len(verts_12) != 5:
-                rospy.logwarn_throttle(2.0, f"Se esperaban 5 vértices para Dedo 1-2, pero se obtuvieron {len(verts_12)}.")
-                self.rate.sleep()
-                continue
-            if SHAPE_DEDO34 == "PENTAGONO" and len(verts_34) != 5:
-                rospy.logwarn_throttle(2.0, f"Se esperaban 5 vértices para Dedo 3-4, pero se obtuvieron {len(verts_34)}.")
-                self.rate.sleep()
-                continue
+            # # Verificar que se obtienen los puntos necesarios según la forma seleccionada
+            # if SHAPE_DEDO12 == "PENTAGONO" and len(verts_12) != 5:
+            #     rospy.logwarn_throttle(2.0, f"Se esperaban 5 vértices para Dedo 1-2, pero se obtuvieron {len(verts_12)}.")
+            #     self.rate.sleep()
+            #     continue
+            # if SHAPE_DEDO34 == "PENTAGONO" and len(verts_34) != 5:
+            #     rospy.logwarn_throttle(2.0, f"Se esperaban 5 vértices para Dedo 3-4, pero se obtuvieron {len(verts_34)}.")
+            #     self.rate.sleep()
+            #     continue
 
-            if SHAPE_DEDO12 == "CUATRO_LADOS" and len(verts_12) != 4:
-                rospy.logwarn_throttle(2.0, f"Se esperaban 4 vértices para Dedo 1-2, pero se obtuvieron {len(verts_12)}.")
-                self.rate.sleep()
-                continue
-            if SHAPE_DEDO34 == "CUATRO_LADOS" and len(verts_34) != 4:
-                rospy.logwarn_throttle(2.0, f"Se esperaban 4 vértices para Dedo 3-4, pero se obtuvieron {len(verts_34)}.")
-                self.rate.sleep()
-                continue
+            # if SHAPE_DEDO12 == "CUATRO_LADOS" and len(verts_12) != 4:
+            #     rospy.logwarn_throttle(2.0, f"Se esperaban 4 vértices para Dedo 1-2, pero se obtuvieron {len(verts_12)}.")
+            #     self.rate.sleep()
+            #     continue
+            # if SHAPE_DEDO34 == "CUATRO_LADOS" and len(verts_34) != 4:
+            #     rospy.logwarn_throttle(2.0, f"Se esperaban 4 vértices para Dedo 3-4, pero se obtuvieron {len(verts_34)}.")
+            #     self.rate.sleep()
+            #     continue
 
-            if SHAPE_DEDO12 == "HEXAGONO" and len(verts_12) != 6:
-                rospy.logwarn_throttle(2.0, f"Se esperaban 6 vértices para Dedo 1-2, pero se obtuvieron {len(verts_12)}.")
-                self.rate.sleep()
-                continue
-            if SHAPE_DEDO34 == "HEXAGONO" and len(verts_34) != 6:
-                rospy.logwarn_throttle(2.0, f"Se esperaban 6 vértices para Dedo 3-4, pero se obtuvieron {len(verts_34)}.")
-                self.rate.sleep()
-                continue
+            # if SHAPE_DEDO12 == "HEXAGONO" and len(verts_12) != 6:
+            #     rospy.logwarn_throttle(2.0, f"Se esperaban 6 vértices para Dedo 1-2, pero se obtuvieron {len(verts_12)}.")
+            #     self.rate.sleep()
+            #     continue
+            # if SHAPE_DEDO34 == "HEXAGONO" and len(verts_34) != 6:
+            #     rospy.logwarn_throttle(2.0, f"Se esperaban 6 vértices para Dedo 3-4, pero se obtuvieron {len(verts_34)}.")
+            #     self.rate.sleep()
+            #     continue
 
             # 2. Visualizar polígonos
             self.publish_vertices_marker(verts_12, frame_id=self.frame_id, ns="poligono_12", id=0)
@@ -899,15 +1254,7 @@ class EllipseMethodNode:
                     # 2. VISUALIZAR (Llamada a la nueva función)
                     self.publish_debug_geometry(self.rshoulder, p_wrist, v_fore_gripper)
 
-                    # ... dentro del bucle run, después de calcular v_fore_gripper ...
-                    
-                    # CHIVATO 1: Ver si llegamos aquí
-                    # rospy.loginfo("Calculando intersección...")
-
                     candidates = intersection_sphere_line(self.rshoulder, self.l1, p_wrist, v_fore_gripper)
-                    
-                    # CHIVATO 2: Ver cuántos candidatos devuelve
-                    # rospy.loginfo(f"Candidatos encontrados: {len(candidates)}")
 
                     best_elbow = None
                     
@@ -995,18 +1342,30 @@ class EllipseMethodNode:
                 
                 # --- VALIDACIÓN DE ÁNGULOS (Añadido 'is not None') ---
                 if ns_prefix == "poly_34_" and info.get("angulo_eje_mayor_grados") is not None:
-                    angle = info["angulo_eje_mayor_grados"] % 180.0
-                    msg = AngleStamped()
-                    msg.header.stamp = rospy.Time.now()
-                    msg.angle = angle - 90 
-                    self.angle_pub_34.publish(msg)
+                    self.v_major_34 = info["v_major_3d"]
+
+                    # angle = info["angulo_eje_mayor_grados"] % 180.0
+                    # msg = AngleStamped()
+
+                    # if self.stamp_gripper is not None:
+                    #     msg.header.stamp = self.stamp_gripper  ### INTENTO DE SINCRONIZACIÓN ###
+                    # else:
+                    #     msg.header.stamp = rospy.Time.now()
+
+                    # msg.angle = (90 - (angle + degrees(self.roll_arm_ee))) % 360
+                    # self.angle_pub_34.publish(msg)
 
                 elif ns_prefix == "poly_12_" and info.get("angulo_eje_mayor_grados") is not None:
                     angle = info["angulo_eje_mayor_grados"] % 180.0
-                    msg = AngleStamped()
-                    msg.header.stamp = rospy.Time.now()
-                    msg.angle = angle - 90 
-                    self.angle_pub_12.publish(msg)
+                    # msg = AngleStamped()
+
+                    # if self.stamp_gripper is not None:
+                    #     msg.header.stamp = self.stamp_gripper  ### INTENTO DE SINCRONIZACIÓN ###
+                    # else:
+                    #     msg.header.stamp = rospy.Time.now()
+                        
+                    # msg.angle = (90 - (angle + degrees(self.roll_arm_ee))) % 360
+                    # self.angle_pub_12.publish(msg)
 
                 # --- CORRECCIÓN DEL ERROR ---
                 center_data = info.get("centro_pixeles")
