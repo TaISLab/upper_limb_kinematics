@@ -25,6 +25,10 @@ rostopic pub /grasp_state std_msgs/Bool "data: True"
 
 """
 
+# Q4 es la flexión del codo. Definición: 0 grados brazo estirado, 150 grados brazo flexionado al máximo.
+# TODO: Revisar el URDF para que coincida con la definición de ángulo de q4 (flexión del codo). 
+# Actualmente está al revés y se ha corregido en el código mediante pi - q4
+
 class ROSInterface:
 
     def __init__(self):
@@ -47,9 +51,10 @@ class ROSInterface:
         self.joint_state_pub = rospy.Publisher('joint_states', JointState, queue_size=1) 
         
         rospy.Subscriber('/skeleton_3D', Skeleton3D, self.IK_calculator_callback) # Dont forget SELF.
-        rospy.Subscriber('/franka_state_controller/franka_states', FrankaState, self.franka_pose_callback)
-        rospy.Subscriber('/gripper_4f/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
-        rospy.Subscriber('/gripper_4f/q5_buttons', Int32, self.q5_input_callback) # Para recibir el input de q5 desde el joystick
+
+        # rospy.Subscriber('/franka_state_controller/franka_states', FrankaState, self.franka_pose_callback)
+        # rospy.Subscriber('/gripper_4f/grasp_state', Bool, self.grasp_state_callback) # Para saber si el gripper esta activo o no
+        # rospy.Subscriber('/gripper_4f/q5_buttons', Int32, self.q5_input_callback) # Para recibir el input de q5 desde el joystick
 
         # FLAGS de estado
         self.last_valid_kp = True  # Estado anterior de los KP
@@ -227,7 +232,7 @@ class ROSInterface:
                     # Metodo: Se establece el vector q2 de referencia y se rota en el eje local de aplicación de q1. Posteriormente se calcula el ángulo entre el vector de referencia rotado y el vector longitudinal
                     # Punto del plano: right_shoulder
                 
-                if (right_arm.q1 != np.nan):
+                if not np.isnan(right_arm.q1):
                     vect_ref_q2 = ([0, 0, -1]) # SIMPLIFICACION: Vector Z negativo
                     vect_ref_q2_rot = rotate_vector_local(vect_ref_q2, vect_laterolateral, right_arm.q1) # CORREGIDO: Se3 rota sobre el eje local
                     vect_ref_q2_rot_norm = normalize_vector(vect_ref_q2_rot)
@@ -241,7 +246,7 @@ class ROSInterface:
                     )
 
                 ################## Calculo q3 ##################
-                if (right_arm.q1 != np.nan) and (right_arm.q2 != np.nan):
+                if not np.isnan(right_arm.q1) and not np.isnan(right_arm.q2):
                 
                     # Plano de proyección
                     #   vector normal: vector longitudinal del brazo
@@ -259,7 +264,30 @@ class ROSInterface:
                     )
 
                 ################## Calculo q4 ##################
-                right_arm.q4 = calculate_angle_3_points(kp_R_Shoulder, kp_R_Elbow, kp_R_Wrist)
+                # Discrepancia corregida: Usar lógica vectorial idéntica a MATLAB
+                # MATLAB: q4 = atan2(norm(cross(u, f)), dot(u, f))
+                # Esto define 0 grados como brazo estirado (alineado).
+                
+                # Definir vector antebrazo (Codo -> Muñeca)
+                vect_forearm = normalize_vector(kp_R_Wrist - kp_R_Elbow)
+                
+                # 1. Producto Cruz para obtener el eje de rotación y la magnitud del seno
+                cross_prod = np.cross(vect_upperarm, vect_forearm)
+                norm_cross = np.linalg.norm(cross_prod)
+                
+                # 2. Producto Punto para el coseno
+                dot_val = np.dot(vect_upperarm, vect_forearm)
+                
+                # 3. Calcular q4 usando atan2 para máxima robustez y paridad con MATLAB
+                right_arm.q4 = np.degrees(np.arctan2(norm_cross, dot_val))
+
+                # NOTA: calculate_angle_3_points probablemente calculaba el ángulo interior (180 en estirado).
+                # La lógica de arriba calcula la desviación desde el eje (0 en estirado).
+
+                # Bloqueo: Si hay algún NaN en los ángulos, no publicar nada
+                if np.isnan([right_arm.q1, right_arm.q2, right_arm.q3, right_arm.q4]).any():
+                    rospy.logwarn_throttle(2.0, "ARM IK: Solución cinemática inválida (NaN). Saltando frame.")
+                    return
 
                 # Almacenar los KP usados para el cálculo del IK.
                 right_arm.right_shoulder = Point(*kp_R_Shoulder)
@@ -283,7 +311,7 @@ class ROSInterface:
                                                 np.radians(right_arm.q2),
                                                 right_arm.upperarm_length,
                                                 np.radians(right_arm.q3),
-                                                np.radians(right_arm.q4),
+                                                np.pi - np.radians(right_arm.q4), # q4 flexión del codo. TODO: Corregir URDF para que coincida con la definición de ángulo
                                                 right_arm.forearm_length,
                                                 np.radians(self.q5_input) # q5 supinación input from joystick
                                                 ])
@@ -299,8 +327,6 @@ class ROSInterface:
         except Exception as e:
             # Log any errors that occur during calculate
             rospy.logerr(f"Error calculating angles: {e}")
-            import traceback
-            traceback.print_exc()
 
 
 if __name__ == '__main__':

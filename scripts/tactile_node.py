@@ -230,6 +230,7 @@ class EllipseMethodNode:
                                 # 1.0 = Sin filtro (puro ruido)
                                 # 0.1 = Muy suave (mucho lag)
                                 # 0.2 - 0.3 = Buen balance para tracking humano
+        self.is_grasping = False
 
     def skeleton_callback(self, msg):
         # rospy.loginfo("Recibido Skeleton3D.")
@@ -251,6 +252,8 @@ class EllipseMethodNode:
         elapsed_time = current_time - self.t_init_bag
 
         is_grasping = self.t_init_grasp <= elapsed_time <= self.t_finish_grasp
+
+        self.is_grasping = is_grasping
 
         grasp_msg = Bool()
         grasp_msg.data = True if is_grasping else False

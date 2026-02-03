@@ -5,10 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
-        - /TF1/Frames1
-        - /TF1/Tree1
-        - /wrench_debug1
       Splitter Ratio: 0.6029411554336548
     Tree Height: 861
   - Class: rviz/Views
@@ -19,7 +15,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: PoseCloud
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -27,24 +23,6 @@ Toolbars:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 1
-      Class: rviz/Grid
-      Color: 160; 160; 164
-      Enabled: true
-      Line Style:
-        Line Width: 0.029999999329447746
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 10
-      Reference Frame: base_link
-      Value: true
     - Class: rviz/TF
       Enabled: true
       Filter (blacklist): ""
@@ -216,8 +194,6 @@ Visualization Manager:
           Value: false
         fr3_link8:
           Value: false
-        human_arm:
-          Value: true
         soporte_gripper:
           Value: false
       Marker Alpha: 1
@@ -233,7 +209,8 @@ Visualization Manager:
               camera1_aligned_depth_to_color_frame:
                 {}
               camera1_color_frame:
-                {}
+                camera1_color_optical_frame:
+                  {}
               camera1_depth_frame:
                 camera1_depth_optical_frame:
                   {}
@@ -243,8 +220,6 @@ Visualization Manager:
               camera1_infra2_frame:
                 camera1_infra2_optical_frame:
                   {}
-          camera1_color_optical_frame:
-            {}
           camera2_bottom_screw_frame:
             camera2_link:
               camera2_aligned_depth_to_color_frame:
@@ -351,80 +326,48 @@ Visualization Manager:
                                 dedo4_link1:
                                   dedo4_link2:
                                     {}
-          human_arm:
-            {}
       Update Interval: 0
       Value: true
-    - Class: rviz/Image
-      Enabled: false
-      Image Topic: /camera4/hand/pose_img
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Queue Size: 2
-      Transport Hint: raw
-      Unreliable: false
-      Value: false
-    - Class: rviz/Image
-      Enabled: false
-      Image Topic: /camera3/hand/pose_img
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Queue Size: 2
-      Transport Hint: raw
-      Unreliable: false
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud
-      Color: 114; 159; 207
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: PoseCloud
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.03999999910593033
-      Style: Spheres
-      Topic: /skeleton_3d/keypoints
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /skeleton_3d/connectors
-      Name: bones
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
     - Class: rviz/Group
       Displays:
-        - Class: rviz/Marker
+        - Class: rviz/MarkerArray
           Enabled: true
-          Marker Topic: /hand_pose_3d_markers
-          Name: HandMarker
+          Marker Topic: /wrench_line_markers
+          Name: wrench_debug
           Namespaces:
             {}
-          Queue Size: 1
+          Queue Size: 100
           Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 252; 175; 62
+          Enabled: true
+          History Length: 1
+          Name: dummy_wrist
+          Queue Size: 10
+          Radius: 0.009999999776482582
+          Topic: /dummy/wrist
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 252; 175; 62
+          Enabled: true
+          History Length: 1
+          Name: dummy_elbow
+          Queue Size: 10
+          Radius: 0.009999999776482582
+          Topic: /dummy/elbow
+          Unreliable: false
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /skeleton_3D_robust/connectors
+          Name: Marker_robust
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -434,291 +377,149 @@ Visualization Manager:
           Axis: Z
           Channel Name: intensity
           Class: rviz/PointCloud
-          Color: 255; 255; 255
-          Color Transformer: Intensity
+          Color: 204; 0; 0
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: PoseCloud_robust
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.03999999910593033
+          Style: Spheres
+          Topic: /skeleton_3D_robust/keypoints
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /wrist_normal_marker
+          Name: normal_vector
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /wrist_point_marker
+          Name: wrist
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /forearm_plane_marker
+          Name: planes
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /wrist_line_marker
+          Name: intersection_of_planes
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: false
+      Name: old
+    - Alpha: 0.5
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: false
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: FR3
+      Robot Description: robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: false
+      Visual Enabled: true
+    - Alpha: 0.5
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: false
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: gripper
+      Robot Description: gripper_4f/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: false
+      Visual Enabled: true
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: base_link
+      Value: true
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud
+          Color: 114; 159; 207
+          Color Transformer: FlatColor
           Decay Time: 0
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Min Color: 0; 0; 0
-          Name: HandPoints
+          Name: PoseCloud
           Position Transformer: XYZ
           Queue Size: 10
           Selectable: true
           Size (Pixels): 3
-          Size (m): 0.013000000268220901
+          Size (m): 0.03999999910593033
           Style: Spheres
-          Topic: /hand_pose_3d_pointcloud
+          Topic: /skeleton_3d/keypoints
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
-      Enabled: false
-      Name: hand_pose_3d
-    - Class: rviz/Group
-      Displays:
-        - Class: rviz/Camera
+        - Class: rviz/Marker
           Enabled: true
-          Image Rendering: background and overlay
-          Image Topic: /camera1/color/epipolar_intersection
-          Name: camera1
-          Overlay Alpha: 0.5
-          Queue Size: 2
-          Transport Hint: raw
-          Unreliable: false
+          Marker Topic: /skeleton_3d/connectors
+          Name: bones
+          Namespaces:
+            {}
+          Queue Size: 100
           Value: true
-          Visibility:
-            Grid: true
-            Image: true
-            Marker: false
-            Marker_robust: true
-            PoseCloud: true
-            PoseCloud_robust: true
-            RobotModel: true
-            TF: true
-            Value: true
-            dummy_elbow: true
-            dummy_wrist: true
-            ellipses: true
-            epipolar_debug:
-              Value: true
-              camera2: true
-              camera3: true
-              camera4: true
-            hand_pose_3d:
-              "": true
-              Value: true
-            intersection_of_planes: true
-            normal_vector: true
-            optitrack: true
-            planes: true
-            tactile_elbow: true
-            tactile_wrist: true
-            wrench_debug: true
-            wrist: true
-          Zoom Factor: 0.30000001192092896
-        - Class: rviz/Camera
-          Enabled: true
-          Image Rendering: background and overlay
-          Image Topic: /camera2/color/epipolar_intersection
-          Name: camera2
-          Overlay Alpha: 0.5
-          Queue Size: 2
-          Transport Hint: raw
-          Unreliable: false
-          Value: true
-          Visibility:
-            Grid: true
-            Image: true
-            Marker: false
-            Marker_robust: true
-            PoseCloud: true
-            PoseCloud_robust: true
-            RobotModel: true
-            TF: true
-            Value: true
-            dummy_elbow: true
-            dummy_wrist: true
-            ellipses: true
-            epipolar_debug:
-              Value: true
-              camera1: true
-              camera3: true
-              camera4: true
-            hand_pose_3d:
-              "": true
-              Value: true
-            intersection_of_planes: true
-            normal_vector: true
-            optitrack: true
-            planes: true
-            tactile_elbow: true
-            tactile_wrist: true
-            wrench_debug: true
-            wrist: true
-          Zoom Factor: 0.30000001192092896
-        - Class: rviz/Camera
-          Enabled: true
-          Image Rendering: background and overlay
-          Image Topic: /camera3/color/epipolar_intersection
-          Name: camera3
-          Overlay Alpha: 0.5
-          Queue Size: 2
-          Transport Hint: raw
-          Unreliable: false
-          Value: true
-          Visibility:
-            Grid: true
-            Image: true
-            Marker: false
-            Marker_robust: true
-            PoseCloud: true
-            PoseCloud_robust: true
-            RobotModel: true
-            TF: true
-            Value: true
-            dummy_elbow: true
-            dummy_wrist: true
-            ellipses: true
-            epipolar_debug:
-              Value: true
-              camera1: true
-              camera2: true
-              camera4: true
-            hand_pose_3d:
-              "": true
-              Value: true
-            intersection_of_planes: true
-            normal_vector: true
-            optitrack: true
-            planes: true
-            tactile_elbow: true
-            tactile_wrist: true
-            wrench_debug: true
-            wrist: true
-          Zoom Factor: 0.30000001192092896
-        - Class: rviz/Camera
-          Enabled: true
-          Image Rendering: background and overlay
-          Image Topic: /camera4/color/epipolar_intersection
-          Name: camera4
-          Overlay Alpha: 0.5
-          Queue Size: 2
-          Transport Hint: raw
-          Unreliable: false
-          Value: true
-          Visibility:
-            Grid: true
-            Image: true
-            Marker: false
-            Marker_robust: true
-            PoseCloud: true
-            PoseCloud_robust: true
-            RobotModel: true
-            TF: true
-            Value: true
-            dummy_elbow: true
-            dummy_wrist: true
-            ellipses: true
-            epipolar_debug:
-              Value: true
-              camera1: true
-              camera2: true
-              camera3: true
-            hand_pose_3d:
-              "": true
-              Value: true
-            intersection_of_planes: true
-            normal_vector: true
-            optitrack: true
-            planes: true
-            tactile_elbow: true
-            tactile_wrist: true
-            wrench_debug: true
-            wrist: true
-          Zoom Factor: 0.30000001192092896
-      Enabled: false
-      Name: epipolar_debug
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /forearm_plane_marker
-      Name: planes
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /wrist_line_marker
-      Name: intersection_of_planes
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Alpha: 0.5
-      Class: rviz/RobotModel
-      Collision Enabled: false
-      Enabled: true
-      Links:
-        All Links Enabled: true
-        Expand Joint Details: false
-        Expand Link Details: false
-        Expand Tree: false
-        Link Tree Style: Links in Alphabetic Order
-      Name: RobotModel
-      Robot Description: robot_description
-      TF Prefix: ""
-      Update Interval: 0
-      Value: true
-      Visual Enabled: true
-    - Alpha: 0.5
-      Class: rviz/RobotModel
-      Collision Enabled: false
-      Enabled: true
-      Links:
-        All Links Enabled: true
-        Expand Joint Details: false
-        Expand Link Details: false
-        Expand Tree: false
-        Link Tree Style: Links in Alphabetic Order
-      Name: RobotModel
-      Robot Description: gripper_4f/robot_description
-      TF Prefix: ""
-      Update Interval: 0
-      Value: true
-      Visual Enabled: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /wrist_normal_marker
-      Name: normal_vector
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /wrist_point_marker
-      Name: wrist
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud
-      Color: 204; 0; 0
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: PoseCloud_robust
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.03999999910593033
-      Style: Spheres
-      Topic: /skeleton_3D_robust/keypoints
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /skeleton_3D_robust/connectors
-      Name: Marker_robust
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
+      Name: visual
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /optitrack/markers
@@ -727,95 +528,48 @@ Visualization Manager:
         optitrack_skeleton: true
       Queue Size: 100
       Value: true
-    - Alpha: 1
-      Class: rviz/PointStamped
-      Color: 204; 41; 204
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /ellipse_overlay_marker
+          Name: ellipses
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 204; 41; 204
+          Enabled: true
+          History Length: 1
+          Name: tactile_wrist
+          Queue Size: 10
+          Radius: 0.009999999776482582
+          Topic: /tactile/wrist
+          Unreliable: false
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /ellipse_vertices_marker
+          Name: vertices garra
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Alpha: 1
+          Class: rviz/PointStamped
+          Color: 204; 41; 204
+          Enabled: true
+          History Length: 1
+          Name: tactile_elbow
+          Queue Size: 10
+          Radius: 0.009999999776482582
+          Topic: /tactile/elbow
+          Unreliable: false
+          Value: true
       Enabled: true
-      History Length: 1
-      Name: tactile_wrist
-      Queue Size: 10
-      Radius: 0.009999999776482582
-      Topic: /tactile/wrist
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Class: rviz/PointStamped
-      Color: 204; 41; 204
-      Enabled: true
-      History Length: 1
-      Name: tactile_elbow
-      Queue Size: 10
-      Radius: 0.009999999776482582
-      Topic: /tactile/elbow
-      Unreliable: false
-      Value: true
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /debug/shoulder_sphere
-      Name: Marker
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /debug/intersection_line
-      Name: Marker
-      Namespaces:
-        debug_geometry_line: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/Marker
-      Enabled: false
-      Marker Topic: /ellipse_vertices_marker
-      Name: Marker
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /ellipse_overlay_marker
-      Name: ellipses
-      Namespaces:
-        poly_12_ellipse_diagonal_overlay: true
-        poly_12_ellipse_overlay: true
-        poly_12_poly_overlay: true
-        poly_34_ellipse_diagonal_overlay: true
-        poly_34_ellipse_overlay: true
-        poly_34_poly_overlay: true
-      Queue Size: 100
-      Value: true
-    - Alpha: 1
-      Class: rviz/PointStamped
-      Color: 252; 175; 62
-      Enabled: true
-      History Length: 1
-      Name: dummy_elbow
-      Queue Size: 10
-      Radius: 0.009999999776482582
-      Topic: /dummy/elbow
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Class: rviz/PointStamped
-      Color: 252; 175; 62
-      Enabled: true
-      History Length: 1
-      Name: dummy_wrist
-      Queue Size: 10
-      Radius: 0.009999999776482582
-      Topic: /dummy/wrist
-      Unreliable: false
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /wrench_line_markers
-      Name: wrench_debug
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
+      Name: tactile
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -837,7 +591,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.41823050379753113
+      Distance: 1.778165340423584
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -845,17 +599,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.43808263540267944
-        Y: -0.16073188185691833
-        Z: 0.5188412070274353
+        X: 0.27167579531669617
+        Y: 0.05228828266263008
+        Z: 0.7728849053382874
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.42979666590690613
+      Pitch: 0.5447962284088135
       Target Frame: <Fixed Frame>
-      Yaw: 5.637940406799316
+      Yaw: 4.832935810089111
     Saved: ~
 Window Geometry:
   Displays:
@@ -863,21 +617,11 @@ Window Geometry:
   Height: 1012
   Hide Left Dock: true
   Hide Right Dock: true
-  Image:
-    collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000200000000000001560000039afc0200000009fb000000100044006900730070006c006100790073000000003d0000039a000000c900fffffffb0000000a0056006900650077007300000002a5000000d9000000a400fffffffb0000000800540069006d006500000003710000004c0000003900fffffffb0000000a0049006d006100670065000000020b0000009e0000001600fffffffb0000000a0049006d006100670065000000026e000001690000001600fffffffb0000000e00630061006d0065007200610031000000018a0000005e0000001600fffffffb0000000e00630061006d006500720061003200000001b3000000870000001600fffffffb0000000e00630061006d006500720061003400000001f6000000ce0000001600fffffffb0000000e00630061006d006500720061003300000002790000015e0000001600ffffff00000001000001b60000039afc0200000003fc0000003d0000012e0000000000fffffffa000000000100000005fb0000000e00630061006d00650072006100310000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100320000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100330000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100340000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000002db000003b50000000000000000fb0000000a0049006d0061006700650000000171000000960000000000000000fb0000000a0049006d006100670065000000020d000001ca0000000000000000000003cd0000039a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000200000000000001560000039afc0200000009fb000000100044006900730070006c006100790073000000003d0000039a000000c900fffffffb0000000a0056006900650077007300000002a5000000d9000000a400fffffffb0000000800540069006d006500000003710000004c0000003900fffffffb0000000a0049006d006100670065000000020b0000009e0000000000000000fb0000000a0049006d006100670065000000026e000001690000000000000000fb0000000e00630061006d006500720061003100000001e9000000550000000000000000fb0000000e00630061006d00650072006100320000000218000000750000000000000000fb0000000e00630061006d00650072006100340000000261000000780000000000000000fb0000000e00630061006d006500720061003300000002b700000124000000000000000000000001000001b60000039afc0200000003fc0000003d0000012e0000000000fffffffa000000000100000005fb0000000e00630061006d00650072006100310000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100320000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100330000000000ffffffff0000000000000000fb0000000e00630061006d00650072006100340000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000002db000003b50000000000000000fb0000000a0049006d0061006700650000000171000000960000000000000000fb0000000a0049006d006100670065000000020d000001ca0000000000000000000003bc0000039a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Time:
     collapsed: false
   Views:
     collapsed: false
-  Width: 973
+  Width: 956
   X: 0
-  Y: 0
-  camera1:
-    collapsed: false
-  camera2:
-    collapsed: false
-  camera3:
-    collapsed: false
-  camera4:
-    collapsed: false
+  Y: 1
