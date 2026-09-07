@@ -2,7 +2,7 @@
 
 ## Overview
 
-Este paquete calcula la cinemática del brazo humano usando las posiciones cartesianas obtenidas del topic `/skeleton_3D` y ejecuta un modelo URDF sobre el esqueleto de puntos obtenido del sistema de visión.
+Este paquete calcula la cinemática inversa del brazo humano usando las posiciones cartesianas obtenidas del topic `/skeleton_3D` y ejecuta un modelo URDF sobre el esqueleto de puntos obtenido del sistema de visión.
 
 ## Table of Contents
 - 0. URDF
