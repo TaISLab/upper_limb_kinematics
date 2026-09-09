@@ -86,3 +86,11 @@ roslaunch human_articular_space kinematics_right_arm.launch use_rviz:=false use_
 roslaunch human_articular_space kinematics_right_arm.launch use_rviz:=true use_tf2_listener:=true
 ```
 
+## Funding
+
+![MICIU, cofinanciado por la Unión Europea, Agencia Estatal de Investigación](docs/funding-logo.jpg)
+
+MICIU / AEI / FEDER
+
+This work is part of project PID2021-127221OB-I00 (CONCERTO — Control Colaborativo para Interacción física Empática entre RoboT y humanO), funded by MICIU/AEI/10.13039/501100011033/FEDER, UE.
+
